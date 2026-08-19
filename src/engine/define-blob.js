@@ -35,17 +35,20 @@ function svgMarkup(clipId, holes = []) {
   return `<svg viewBox="-15 -15 259 259" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" shape-rendering="geometricPrecision">
   <defs>
     <clipPath id="${clipId}"><path data-clip></path></clipPath>
+    <filter id="${clipId}-eye-soft" x="-40%" y="-40%" width="180%" height="180%" color-interpolation-filters="sRGB">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="0.5"/>
+    </filter>
     ${chromeDefs(clipId)}
   </defs>
   <g data-face>
     <path data-layer="body" fill="var(--fg)"/>
     <g clip-path="url(#${clipId})">
       ${chromeLiveMarkup(clipId, CX)}
-      <path data-layer="eye-l" fill="var(--bg)"/>
-      <path data-layer="eye-r" fill="var(--bg)"/>
       ${holePaths}
       <path data-layer="mouth" fill="var(--bg)" opacity="0"/>
     </g>
+    <path data-layer="eye-l" fill="var(--bg)" stroke="var(--bg)" stroke-width="0.85" stroke-linejoin="round" vector-effect="non-scaling-stroke" filter="url(#${clipId}-eye-soft)"/>
+    <path data-layer="eye-r" fill="var(--bg)" stroke="var(--bg)" stroke-width="0.85" stroke-linejoin="round" vector-effect="non-scaling-stroke" filter="url(#${clipId}-eye-soft)"/>
     <g data-fx>
       ${sats}${pings}${dots}
       <circle data-progress-track cx="${CX}" cy="${CX}" r="62" fill="none" stroke="var(--fg)" stroke-width="5" opacity="0"/>
@@ -72,6 +75,12 @@ svg {
   height: auto;
   overflow: visible;
   shape-rendering: geometricPrecision;
+}
+[data-layer="eye-l"], [data-layer="eye-r"] {
+  stroke: var(--bg);
+  stroke-width: 0.85;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
 }
 `;
 }

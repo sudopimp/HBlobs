@@ -27,6 +27,7 @@ declare -A TWIN_TOKEN=(
   [gates/sota-csg.mjs]=painted-hole-not-sdf
   [gates/sota-seed.mjs]=seed-nondeterministic
   [gates/sota-nl.mjs]=nl-evals-prompt
+  [gates/craft-eye-smooth.mjs]=sampled-ring
 )
 
 gates=()

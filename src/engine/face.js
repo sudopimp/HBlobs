@@ -46,28 +46,63 @@ export function idleGazeTarget(pose = {}) {
   return { x: pose.gazeX ?? 0, y: pose.gazeY ?? 0 };
 }
 
+/** κ = 4/3 tan(π/8). One cubic per quarter-circle; error ~0.02% vs a true arc. */
+const KAPPA = 0.5522847498307936;
+
+function mapped(mapFn, x, y, turn, tilt) {
+  return mapFn(x, y, turn, tilt);
+}
+
+function fmt(p) {
+  return `${Number(p[0]).toFixed(3)} ${Number(p[1]).toFixed(3)}`;
+}
+
+function cubicTo(mapFn, c1x, c1y, c2x, c2y, x, y, turn, tilt) {
+  return `C${fmt(mapped(mapFn, c1x, c1y, turn, tilt))} ${fmt(mapped(mapFn, c2x, c2y, turn, tilt))} ${fmt(mapped(mapFn, x, y, turn, tilt))}`;
+}
+
+function lineTo(mapFn, x, y, turn, tilt) {
+  return `L${fmt(mapped(mapFn, x, y, turn, tilt))}`;
+}
+
+/** Vertical stadium: two circular caps (4 cubics) + two straight sides. Pose-warped via mapFn. */
+function stadiumPath(mapFn, cx, cy, rx, ry, turn, tilt) {
+  const r = rx;
+  const a = ry - r;
+  const y1 = cy - a;
+  const y2 = cy + a;
+  const k = KAPPA;
+  const start = mapped(mapFn, cx - r, y1, turn, tilt);
+  return (
+    `M${fmt(start)}` +
+    cubicTo(mapFn, cx - r, y1 - r * k, cx - r * k, y1 - r, cx, y1 - r, turn, tilt) +
+    cubicTo(mapFn, cx + r * k, y1 - r, cx + r, y1 - r * k, cx + r, y1, turn, tilt) +
+    lineTo(mapFn, cx + r, y2, turn, tilt) +
+    cubicTo(mapFn, cx + r, y2 + r * k, cx + r * k, y2 + r, cx, y2 + r, turn, tilt) +
+    cubicTo(mapFn, cx - r * k, y2 + r, cx - r, y2 + r * k, cx - r, y2, turn, tilt) +
+    lineTo(mapFn, cx - r, y1, turn, tilt) +
+    "Z"
+  );
+}
+
+/** Ellipse (blink slit / non-stadium hole): 4 cubics, not a sampled ring. */
+function ellipsePath(mapFn, cx, cy, rx, ry, turn, tilt) {
+  const kx = rx * KAPPA;
+  const ky = ry * KAPPA;
+  const start = mapped(mapFn, cx + rx, cy, turn, tilt);
+  return (
+    `M${fmt(start)}` +
+    cubicTo(mapFn, cx + rx, cy + ky, cx + kx, cy + ry, cx, cy + ry, turn, tilt) +
+    cubicTo(mapFn, cx - kx, cy + ry, cx - rx, cy + ky, cx - rx, cy, turn, tilt) +
+    cubicTo(mapFn, cx - rx, cy - ky, cx - kx, cy - ry, cx, cy - ry, turn, tilt) +
+    cubicTo(mapFn, cx + kx, cy - ry, cx + rx, cy - ky, cx + rx, cy, turn, tilt) +
+    "Z"
+  );
+}
+
 export function contourPath(mapFn, cx, cy, rx, ry, turn, tilt) {
-  const pts = [];
-  if (isStadium(rx, ry)) {
-    const h = ry - rx;
-    const n = EYE_N;
-    const half = n / 2;
-    for (let i = 0; i < n; i++) {
-      if (i < half) {
-        const a = Math.PI + (i / half) * Math.PI;
-        pts.push(mapFn(cx + Math.cos(a) * rx, cy - h + Math.sin(a) * rx, turn, tilt));
-      } else {
-        const a = ((i - half) / half) * Math.PI;
-        pts.push(mapFn(cx + Math.cos(a) * rx, cy + h + Math.sin(a) * rx, turn, tilt));
-      }
-    }
-  } else {
-    for (let i = 0; i < EYE_N; i++) {
-      const a = (i / EYE_N) * Math.PI * 2;
-      pts.push(mapFn(cx + Math.cos(a) * rx, cy + Math.sin(a) * ry, turn, tilt));
-    }
-  }
-  return pathFromRing(pts);
+  if (isStadium(rx, ry)) return stadiumPath(mapFn, cx, cy, rx, ry, turn, tilt);
+  return ellipsePath(mapFn, cx, cy, rx, ry, turn, tilt);
 }
 
 export function pathFromRing(pts) {

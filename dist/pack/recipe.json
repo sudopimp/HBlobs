@@ -2,7 +2,7 @@
   "schemaVersion": 0,
   "tag": "gummy-blob",
   "template": "gummy",
-  "skin": "gummy",
+  "skin": "flat",
   "state": "idle",
   "fill": "#e84a9a",
   "face": {
@@ -14,8 +14,14 @@
   },
   "states": {
     "idle": {},
+    "listening": {},
+    "thinking": {},
+    "working": {},
     "run": {},
-    "failed": {}
+    "failed": {},
+    "sleeping": {},
+    "waking": {},
+    "searching": {}
   },
   "body": [
     {

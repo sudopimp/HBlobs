@@ -89,16 +89,19 @@ export function renderEngineSvg(recipe, { state = "idle", motion = {} } = {}) {
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -15 259 259" width="384" height="384" shape-rendering="geometricPrecision">
   <defs>
     <clipPath id="${clipId}"><path d="${bodyD}"/></clipPath>
+    <filter id="hblob-eye-soft" x="-40%" y="-40%" width="180%" height="180%" color-interpolation-filters="sRGB">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="0.5"/>
+    </filter>
     ${chromeDefs("hblob")}
   </defs>
   <g transform="${faceTransform(pose, motion)}">
     <path d="${bodyD}" fill="${fill}"/>
     <g clip-path="url(#${clipId})">
       ${layers}
-      <path d="${eyeL}" fill="${hole}"/>
-      <path d="${eyeR}" fill="${hole}"/>
       ${mouth ? `<path d="${mouth}" fill="${hole}" opacity="1"/>` : ""}
     </g>
+    <path d="${eyeL}" fill="${hole}" stroke="${hole}" stroke-width="0.85" stroke-linejoin="round" vector-effect="non-scaling-stroke" filter="url(#hblob-eye-soft)"/>
+    <path d="${eyeR}" fill="${hole}" stroke="${hole}" stroke-width="0.85" stroke-linejoin="round" vector-effect="non-scaling-stroke" filter="url(#hblob-eye-soft)"/>
   </g>
 </svg>`;
 }
