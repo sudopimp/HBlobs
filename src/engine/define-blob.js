@@ -1,4 +1,4 @@
-import { clamp, smin, traceSdf, mirrorRing } from "./sdf.js";
+import { clamp, smin, smax, sdfCapsule, sdfRbox, traceSdf, mirrorRing } from "./sdf.js";
 import { spring, poseSprings, stepSpring, bounceParabola, expAlpha } from "./spring.js";
 import {
   CX,
@@ -11,8 +11,9 @@ import {
   eyeWidthScale,
   eyePathAt,
   mouthPath,
+  idleGazeTarget,
 } from "./face.js";
-import { blinkLid } from "./blink.js";
+import { blinkLid, blinkOpenY } from "./blink.js";
 import { drawFx } from "./overlays.js";
 
 const RING_N = 128;
@@ -90,10 +91,10 @@ let uid = 0;
 
 function poseDefaults(pose) {
   return {
-    turn: 0,
-    tilt: 0,
-    roll: 0,
-    scale: 1,
+    turn: -16,
+    tilt: -7,
+    roll: 12,
+    scale: 1.09,
     eyeScale: 1.28,
     gazeX: 0,
     gazeY: 0,
@@ -149,6 +150,20 @@ export function defineBlob(recipe) {
         const x = op.x;
         const y = op.y;
         nodes[op.id] = (px, py) => Math.hypot(px - x, py - y) - r;
+      } else if (op.type === "capsule") {
+        const r = radiusOf(op, opts);
+        const ax = op.ax;
+        const ay = op.ay;
+        const bx = op.bx;
+        const by = op.by;
+        nodes[op.id] = (px, py) => sdfCapsule(px, py, ax, ay, bx, by, r);
+      } else if (op.type === "rbox") {
+        const r = radiusOf(op, opts);
+        const x = op.x;
+        const y = op.y;
+        const w = op.w;
+        const h = op.h;
+        nodes[op.id] = (px, py) => sdfRbox(px, py, x, y, w, h, r);
       } else if (op.type === "smin") {
         const a = nodes[op.a];
         const b = nodes[op.b];
@@ -157,6 +172,22 @@ export function defineBlob(recipe) {
         }
         const k = op.k;
         nodes[op.id] = (px, py) => smin(a(px, py), b(px, py), k);
+      } else if (op.type === "subtract") {
+        const a = nodes[op.a];
+        const b = nodes[op.b];
+        if (typeof a !== "function" || typeof b !== "function") {
+          throw new Error(`subtract "${op.id}" references a node that is not yet defined`);
+        }
+        const k = op.k;
+        nodes[op.id] = (px, py) => smax(a(px, py), -b(px, py), k);
+      } else if (op.type === "smax") {
+        const a = nodes[op.a];
+        const b = nodes[op.b];
+        if (typeof a !== "function" || typeof b !== "function") {
+          throw new Error(`smax "${op.id}" references a node that is not yet defined`);
+        }
+        const k = op.k;
+        nodes[op.id] = (px, py) => smax(a(px, py), b(px, py), k);
       } else {
         throw new Error(`unknown body op "${op.type}"`);
       }
@@ -170,12 +201,21 @@ export function defineBlob(recipe) {
   function startPoint(opts = {}) {
     let best = null;
     for (const op of body) {
-      if (op.type !== "circle") continue;
-      const r = radiusOf(op, opts);
-      if (!best || r > best.r) best = { x: op.x, y: op.y, r };
+      if (op.type === "circle") {
+        const r = radiusOf(op, opts);
+        if (!best || r > best.r) best = { x: op.x, y: op.y + r, r };
+      } else if (op.type === "capsule") {
+        const r = radiusOf(op, opts);
+        const x = (op.ax + op.bx) / 2;
+        const y = (op.ay + op.by) / 2;
+        if (!best || r > best.r) best = { x, y: y + r, r };
+      } else if (op.type === "rbox") {
+        const r = radiusOf(op, opts);
+        if (!best || r > best.r) best = { x: op.x, y: op.y + op.h / 2, r };
+      }
     }
     if (!best) return { x: 0, y: 80 };
-    return { x: best.x, y: best.y + best.r };
+    return { x: best.x, y: best.y };
   }
 
   function targetsFor(state) {
@@ -215,6 +255,9 @@ export function defineBlob(recipe) {
   }
 
   function faceGeometry(state, { gaze = 0 } = {}) {
+    if (!STATES.includes(state)) {
+      state = STATES.includes("idle") ? "idle" : STATES[0];
+    }
     const pose = targetsFor(state);
     const size = eyeWidthScale(pose.eyeScale ?? 1);
     const gazeX = (pose.gazeX ?? 0) * gaze;
@@ -413,8 +456,9 @@ export function defineBlob(recipe) {
           tiltT += py * 0.28;
         }
       } else if (now > this._gaze.until) {
-        this._gaze.tx = pose.gazeX + (Math.random() * 2 - 1) * 4;
-        this._gaze.ty = pose.gazeY + (Math.random() * 2 - 1) * 3;
+        const held = idleGazeTarget(pose);
+        this._gaze.tx = held.x;
+        this._gaze.ty = held.y;
         this._gaze.until = now + pose.gazeMin + Math.random() * (pose.gazeMax - pose.gazeMin);
       }
 
@@ -511,13 +555,14 @@ export function defineBlob(recipe) {
       this._els.body.setAttribute("d", d);
       this._els.clip.setAttribute("d", d);
 
+      const openY = blinkOpenY(lid, pose.eyeScale);
       this._els.eyeL.setAttribute(
         "d",
-        eyePathAt(mapFn, -1, s.eyeOpen.x * lid, s.eyeSize.x, s.gazeX.x, s.gazeY.x, s.turn.x, s.tilt.x, 1, face),
+        eyePathAt(mapFn, -1, openY, s.eyeSize.x, s.gazeX.x, s.gazeY.x, s.turn.x, s.tilt.x, 1, face),
       );
       this._els.eyeR.setAttribute(
         "d",
-        eyePathAt(mapFn, 1, s.eyeOpen.x * lid, s.eyeSize.x, s.gazeX.x, s.gazeY.x, s.turn.x, s.tilt.x, 1, face),
+        eyePathAt(mapFn, 1, openY, s.eyeSize.x, s.gazeX.x, s.gazeY.x, s.turn.x, s.tilt.x, 1, face),
       );
       for (const el of this._els.holes) {
         const spec = holes.find((h) => h.id === el.getAttribute("data-hole"));
@@ -580,6 +625,8 @@ export function defineBlob(recipe) {
     recipe,
     targetsFor,
     silhouette,
+    sdf(x, y) { return sdfFor()(x, y); },
+    sdfFor,
     faceGeometry,
     blinksOn,
     BLINK_MIN,
