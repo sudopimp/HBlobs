@@ -1,0 +1,10 @@
+{
+  "id": "synth-gallery-twin",
+  "displayName": "Synth Gallery Twin",
+  "description": "Synthetic petdex-shaped pack. Not a real gallery pet.",
+  "kind": "creature",
+  "submittedBy": "petdex-twin",
+  "spritesheetUrl": "https://assets.petdex.dev/synthetic-twin/spritesheet.webp",
+  "zipUrl": "https://assets.petdex.dev/synthetic-twin/synth.zip",
+  "spritesheetPath": "spritesheet.webp"
+}

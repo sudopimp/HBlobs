@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+  <body>
+    <button class="cta" id="export" type="button">Export pack</button>
+    <script type="module">
+      document.getElementById("export").addEventListener("click", () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = 512;
+        canvas.height = 512;
+        const ctx = canvas.getContext("2d");
+        ctx.fillStyle = "#111110";
+        ctx.fillRect(0, 0, 512, 512);
+        const a = document.createElement("a");
+        a.download = "blob.png";
+        a.href = canvas.toDataURL("image/png");
+        a.click();
+      });
+    </script>
+  </body>
+</html>
