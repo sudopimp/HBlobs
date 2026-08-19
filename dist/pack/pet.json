@@ -1,0 +1,6 @@
+{
+  "id": "seed",
+  "displayName": "HBlob",
+  "description": "A living SDF blob pet for Hermes Agent.",
+  "spritesheetPath": "spritesheet.webp"
+}
