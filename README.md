@@ -2,7 +2,7 @@
 
 A living 2D blob. The website is the engine.
 
-**[Open the live studio →](https://sudopimp.github.io/HBlobs/)** — one blob, full tab, `defineBlob` running. Pointer follow. Click to pose.
+**[Open the live studio →](https://sudopimp.github.io/HBlobs/)** — one blob, full tab. Flat by default. Candy volume optional. Click to cycle product states.
 
 [![MIT](https://img.shields.io/badge/license-MIT-22c55e.svg)](LICENSE)
 [![Hermes](https://img.shields.io/badge/Hermes-%2Fblob-ff5ec8.svg)](https://hermes-agent.nousresearch.com/docs/user-guide/features/skills)
@@ -31,7 +31,8 @@ Need a TTY for `hermes pets show`. Desktop walk uses the roam rows in the atlas,
 
 | You | Open |
 | --- | --- |
-| Anyone | [Live studio](https://sudopimp.github.io/HBlobs/) — the engine, not a GIF |
+| Anyone | [Live studio](https://sudopimp.github.io/HBlobs/) — flat default, candy optional |
+| Embed | [site/embed.html](https://sudopimp.github.io/HBlobs/site/embed.html) — `state` `skin` `follow` `--blob-fill` |
 | Sculptor | [playground/lab.html](https://sudopimp.github.io/HBlobs/playground/lab.html) — click-add mass, export pack |
 | Hermes | `/blob` → 1536×1872 pack → adopt |
 | Engineer | `defineBlob(recipe)` · `node bin/hblobs.mjs new --seed sota-demo` |
