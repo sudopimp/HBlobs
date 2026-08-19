@@ -123,11 +123,6 @@
         <label class="slide">Left ear <input id="earL" type="range" min="0" max="100" value="50" /> <span id="earL-v">50</span></label>
         <label class="slide">Right ear <input id="earR" type="range" min="0" max="100" value="50" /> <span id="earR-v">50</span></label>
         <label class="slide">Belly <input id="belly" type="range" min="8" max="100" value="62" /> <span id="belly-v">62</span></label>
-        <h2>Skin</h2>
-        <div class="chips" id="skins">
-          <button class="chip" data-skin="flat" aria-pressed="true">flat</button>
-          <button class="chip" data-skin="gummy">gummy</button>
-        </div>
         <h2>State</h2>
         <div class="chips" id="states">
           <button class="chip" data-state="idle" aria-pressed="true">idle</button>
@@ -253,23 +248,19 @@
 
       function syncChrome() {
         const r = recipe();
-        const skin = r.skin === "gummy" ? "gummy" : "flat";
+        r.skin = "flat";
         const state = r.states?.[r.state] ? r.state : "idle";
-        r.skin = skin;
         r.state = state;
         const tpl = templateOf(r);
         document.querySelectorAll("#templates [data-template]").forEach((b) => {
           b.setAttribute("aria-pressed", String(b.dataset.template === tpl));
-        });
-        document.querySelectorAll("#skins [data-skin]").forEach((b) => {
-          b.setAttribute("aria-pressed", String(b.dataset.skin === skin));
         });
         document.querySelectorAll("#states [data-state]").forEach((b) => {
           b.setAttribute("aria-pressed", String(b.dataset.state === state));
         });
         snip.textContent =
           `defineBlob({\n  tag: "${r.tag ?? "maker-blob"}",\n  fill: "${r.fill}",\n  body, face, states\n});\n\n` +
-          `<${r.tag ?? "maker-blob"} state="${state}" skin="${skin}" size="128"></${r.tag ?? "maker-blob"}>`;
+          `<${r.tag ?? "maker-blob"} state="${state}" size="128"></${r.tag ?? "maker-blob"}>`;
         jsonPre.textContent = JSON.stringify(r, null, 2);
         syncSliders();
         if (!sharing) {
@@ -288,12 +279,11 @@
           face: r.face,
           states: r.states,
           fill: r.fill,
-          finish: r.skin === "flat" ? "flat" : "gummy",
+          finish: "flat",
         });
         const el = document.createElement(tag);
         el.setAttribute("size", "260");
         el.setAttribute("state", r.states?.[r.state] ? r.state : "idle");
-        el.setAttribute("skin", r.skin === "gummy" ? "gummy" : "flat");
         liveHost.replaceChildren(el);
         liveEl = el;
         syncGhosts();
@@ -345,14 +335,6 @@
         pushHist();
         applyTemplate(b.dataset.template);
         remount();
-      });
-      document.getElementById("skins").addEventListener("click", (ev) => {
-        const b = ev.target.closest("[data-skin]");
-        if (!b) return;
-        pushHist();
-        recipe().skin = b.dataset.skin;
-        if (liveEl) liveEl.setAttribute("skin", b.dataset.skin === "gummy" ? "gummy" : "flat");
-        syncChrome();
       });
       document.getElementById("states").addEventListener("click", (ev) => {
         const b = ev.target.closest("[data-state]");

@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>HBlobs</title>
-    <meta name="description" content="A living 2D blob. Flat by default. Candy volume optional. Product states on the element." />
+    <meta name="description" content="A living 2D flat blob. Product states on the element." />
     <meta property="og:title" content="HBlobs" />
     <meta property="og:url" content="https://sudopimp.github.io/HBlobs/" />
     <meta property="og:image" content="https://sudopimp.github.io/HBlobs/demos/hero.png" />
@@ -58,12 +58,8 @@
     <main>
       <div class="floor">
         <div id="hero"></div>
-        <div class="row" id="skins">
-          <button class="mode" data-skin="flat" aria-pressed="true" type="button">Flat</button>
-          <button class="mode" data-skin="gummy" type="button">Candy</button>
-        </div>
         <div class="row" id="colors"></div>
-        <p class="note" id="say">flat · idle · move the pointer</p>
+        <p class="note" id="say">idle · move the pointer</p>
         <details>
           <summary>States</summary>
           <div id="states"></div>
@@ -90,19 +86,15 @@
       };
       const cycle = ["idle", "listening", "thinking", "working", "failed"];
       let color = "pink";
-      let skin = "flat";
       let state = "idle";
       let el = null;
       let cycleI = 0;
 
       function paint() {
         el = mountBlob(host, tint(baseRecipe(), color), {
-          size: 600, state, follow: true, skin,
+          size: 600, state, follow: true,
         });
-        say.textContent = `${skin} · ${state} · move the pointer · click to cycle`;
-        document.querySelectorAll("#skins [data-skin]").forEach((b) => {
-          b.setAttribute("aria-pressed", String(b.dataset.skin === skin));
-        });
+        say.textContent = `${state} · move the pointer · click to cycle`;
         colorBox.querySelectorAll("button").forEach((b) => {
           b.setAttribute("aria-pressed", String(b.dataset.color === color));
         });
@@ -137,7 +129,7 @@
           b.addEventListener("click", () => {
             state = name;
             if (el) el.setAttribute("state", name);
-            say.textContent = `${skin} · ${state} · move the pointer`;
+            say.textContent = `${state} · move the pointer`;
             stateBox.querySelectorAll("button").forEach((x) => {
               x.setAttribute("aria-pressed", String(x.dataset.state === state));
             });
@@ -148,18 +140,11 @@
         stateBox.append(wrap);
       }
 
-      document.getElementById("skins").addEventListener("click", (ev) => {
-        const b = ev.target.closest("[data-skin]");
-        if (!b) return;
-        skin = b.dataset.skin === "gummy" ? "gummy" : "flat";
-        paint();
-      });
-
       host.addEventListener("click", () => {
         cycleI = (cycleI + 1) % cycle.length;
         state = cycle[cycleI];
         if (el) el.setAttribute("state", state);
-        say.textContent = `${skin} · ${state} · move the pointer · click to cycle`;
+        say.textContent = `${state} · move the pointer · click to cycle`;
       });
 
       paint();

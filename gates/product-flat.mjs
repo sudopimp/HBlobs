@@ -2,10 +2,10 @@
 /**
  * G-flat
  * file:    src/pack/recipe.js + src/engine/define-blob.js
- * pass:    omitted finish/skin → flat; missing skin attr → flat
+ * pass:    any incoming skin/finish is forced flat; engine has no gummy skin branch
  * twin:    gates/fixtures/product-flat-gummy.mjs
- * fail-pass: default-gummy
- * fail-twin: default-gummy
+ * fail-pass: leftover-gummy
+ * fail-twin: leftover-gummy
  */
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -25,22 +25,27 @@ const recipePath = twin
   : resolve(root, "src/pack/recipe.js");
 
 const { ensurePackRecipe } = await import(pathToFileURL(recipePath).href);
-const packed = ensurePackRecipe({ body: [{ type: "circle", id: "a", x: 0, y: 0, r: 40 }] });
+const packed = ensurePackRecipe({
+  skin: "gummy",
+  finish: "gummy",
+  body: [{ type: "circle", id: "a", x: 0, y: 0, r: 40 }],
+});
 
 if (twin) {
   if (packed.skin !== "gummy" || packed.finish !== "gummy") {
     fail("twin-not-gummy", `skin=${packed.skin} finish=${packed.finish}`);
   }
-  fail("default-gummy", `skin=${packed.skin} finish=${packed.finish}`);
+  fail("leftover-gummy", `skin=${packed.skin} finish=${packed.finish}`);
 }
 
 if (packed.skin !== "flat" || packed.finish !== "flat") {
-  fail("default-gummy", `skin=${packed.skin} finish=${packed.finish}`);
+  fail("leftover-gummy", `skin=${packed.skin} finish=${packed.finish}`);
 }
 
 const engine = readFileSync(resolve(root, "src/engine/define-blob.js"), "utf8");
-if (!/this\._skin = "flat"/.test(engine)) fail("default-gummy", "element default is not flat");
-if (!/skinAttr === "gummy"/.test(engine)) fail("default-gummy", "gummy is not opt-in");
+if (/skinAttr === "gummy"|_skin === "gummy"/.test(engine)) {
+  fail("leftover-gummy", "engine still has a gummy skin branch");
+}
 
-console.log(`measured  skin=${packed.skin} finish=${packed.finish}`);
+console.log(`measured  skin=${packed.skin} finish=${packed.finish} gummy-branch=0`);
 console.log("PASS product-flat");

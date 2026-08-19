@@ -36,19 +36,18 @@ export function baseRecipe() {
   };
 }
 
-export function mountBlob(host, recipe, { size = 420, state = "idle", follow = false, skin = "flat" } = {}) {
+export function mountBlob(host, recipe, { size = 420, state = "idle", follow = false } = {}) {
   const tag = `studio-blob-${++seq}`;
   const next = {
     ...recipe,
     tag,
-    finish: skin === "gummy" ? "gummy" : "flat",
-    skin,
+    finish: "flat",
+    skin: "flat",
     face: { ...FACE, ...(recipe.face ?? {}) },
     states: { ...PRODUCT_POSES, ...(recipe.states ?? {}) },
   };
   defineBlob(next);
   const el = document.createElement(tag);
-  el.setAttribute("skin", skin === "gummy" ? "gummy" : "flat");
   el.setAttribute("size", String(size));
   el.setAttribute("state", PRODUCT_POSES[state] ? state : "idle");
   if (follow) el.setAttribute("follow", "");

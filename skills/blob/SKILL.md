@@ -24,8 +24,7 @@ Call `scripts/hblobs.mjs`. Never invent a PNG.
 | `/blob show` | `node scripts/hblobs.mjs show` (`hblobs show`) — `hermes pets show --state idle --once`; `--state run` needs a TTY |
 | `/blob open` | `node scripts/hblobs.mjs open` (`hblobs open`) — optional `playground/lab.html` |
 
-The live custom element defaults to `skin="flat"`. Candy volume is optional: `skin="gummy"`.
-States are element attributes (`idle`, `listening`, `thinking`, `working`, …), not slash verbs.
+The live custom element is flat. States are element attributes (`idle`, `listening`, `thinking`, `working`, …), not slash verbs.
 
 Independent project — not Nous, Hermes, or xAI.
 

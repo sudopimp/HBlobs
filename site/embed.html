@@ -15,9 +15,9 @@
   <body>
     <!--
       Embed contract
-      attributes: state, size, follow, paused, skin
+      attributes: state, size, follow, paused
       CSS: --blob-fill, --blob-eye
-      Default skin is flat. Candy volume is skin=gummy.
+      Flat only.
     -->
     <div id="host"></div>
     <p>
@@ -27,20 +27,14 @@
       <button data-state="working">working</button>
       <button data-state="failed">failed</button>
     </p>
-    <p>
-      <button data-skin="flat">flat</button>
-      <button data-skin="gummy">gummy</button>
-    </p>
-    <p><code>state · size · follow · paused · skin · --blob-fill · --blob-eye</code></p>
+    <p><code>state · size · follow · paused · --blob-fill · --blob-eye</code></p>
     <script type="module">
       import { baseRecipe, mountBlob } from "./stage.mjs";
       const host = document.getElementById("host");
-      let el = mountBlob(host, baseRecipe(), { size: 240, state: "idle", follow: true, skin: "flat" });
+      let el = mountBlob(host, baseRecipe(), { size: 240, state: "idle", follow: true });
       document.body.addEventListener("click", (ev) => {
         const s = ev.target.closest("[data-state]");
         if (s && el) el.setAttribute("state", s.dataset.state);
-        const k = ev.target.closest("[data-skin]");
-        if (k) el = mountBlob(host, baseRecipe(), { size: 240, state: el?.state || "idle", follow: true, skin: k.dataset.skin });
       });
     </script>
   </body>

@@ -76,7 +76,7 @@ function hydrate(recipe) {
   }
   if (!recipe.fill) recipe.fill = recipe.template === "droplet" ? TEAL : MAGENTA;
   if (!recipe.state) recipe.state = "idle";
-  if (recipe.skin !== "gummy") recipe.skin = "flat";
+  recipe.skin = "flat";
   return recipe;
 }
 

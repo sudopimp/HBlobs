@@ -1,12 +1,11 @@
 #!/usr/bin/env node
 /**
- * G-eye-smooth: idle stadium eyes ease the cap↔side join (Figma/iOS ξ),
- * not a hard C+L stadium and not a 48-point sampled ring. Eye holes carry
- * a same-color non-scaling stroke so the dark-on-bright rim keeps coverage.
+ * G-eye-smooth: idle stadium eyes ease the cap↔side join (Figma/iOS ξ).
+ * Flat paint is evenodd-punched (no blur, no overlay stroke).
  *
  * pass:    src/engine/face.js eyePath + define-blob / engine-frame markup
  * twin:    gates/fixtures/eye-sampled-ring.mjs
- * fail-pass: hard-join | sampled-ring | hole-stroke
+ * fail-pass: hard-join | sampled-ring | eye-blur | overlay-stroke | evenodd-hole
  * fail-twin: sampled-ring
  */
 import { resolve } from "node:path";
@@ -51,21 +50,22 @@ const measured = assertSmooth(d, "idle-left");
 
 const engine = read(resolve(root, "src/engine/define-blob.js"));
 const frame = read(resolve(root, "src/pack/engine-frame.js"));
-const liveStroke = ["eye-l", "eye-r"].every((layer) => {
-  const m = engine.match(new RegExp(`<path\\b([^>]*\\bdata-layer="${layer}"[^>]*)>`, "i"));
-  if (!m) return false;
-  const attrs = m[1];
-  return (
-    /fill\s*=\s*["']var\(\s*--bg\s*\)["']/.test(attrs) &&
-    /stroke\s*=\s*["']var\(\s*--bg\s*\)["']/.test(attrs) &&
-    /vector-effect\s*=\s*["']non-scaling-stroke["']/.test(attrs)
-  );
-});
-const packStroke = /<path d="\$\{eyeL\}" fill="\$\{hole\}" stroke="\$\{hole\}"/.test(frame);
 
-if (!liveStroke || !packStroke) {
-  fail("hole-stroke", `live=${liveStroke} pack=${packStroke}`);
+if (/eye-soft/.test(engine) || /data-layer="eye-[lr]"[^>]*filter=/.test(engine) || /hblob-eye-soft/.test(frame)) {
+  fail("eye-blur", "flat eyes still use a blur filter");
+}
+if (/data-layer="eye-[lr]"[^>]*\bstroke=/.test(engine) || /\$\{eye[LR]\}" fill="\$\{hole\}" stroke=/.test(frame)) {
+  fail("overlay-stroke", "flat eyes still expand coverage with a stroke");
+}
+if (!/data-layer="body"[^>]*fill-rule="evenodd"/.test(engine) || !/fill-rule="evenodd"/.test(frame)) {
+  fail("evenodd-hole", "candy is not an evenodd punch");
 }
 
-console.log(`measured  C=${measured.C} L=${measured.L} V=${measured.V} A=${measured.A} stroke=1`);
+const plates = ["eye-l", "eye-r"].every((layer) => {
+  const m = engine.match(new RegExp(`<path\\b([^>]*\\bdata-layer="${layer}"[^>]*)>`, "i"));
+  return m ? /fill\s*=\s*["']var\(\s*--bg\s*\)["']/.test(m[1]) : false;
+});
+if (!plates) fail("evenodd-hole", "under-plate eyes are not fill=var(--bg)");
+
+console.log(`measured  C=${measured.C} L=${measured.L} V=${measured.V} A=${measured.A} evenodd=1 blur=0`);
 console.log("PASS craft-eye-smooth");

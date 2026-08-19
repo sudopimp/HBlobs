@@ -8,12 +8,11 @@ import {
   IDLE_LEAN,
   eyePathAt,
   eyeWidthScale,
+  EYE_PLATE,
   mapPoint,
-  mouthPath,
   pathFromRing,
 } from "../engine/face.js";
 import { blinkOpenY } from "../engine/blink.js";
-import { chromeDefs, chromeRasterEllipses } from "../engine/chrome.js";
 import { CODEX_ROWS, FRAME_COUNTS, HOLE } from "./const.js";
 import { posesFor } from "./geometry.js";
 
@@ -63,7 +62,6 @@ export function renderEngineSvg(recipe, { state = "idle", motion = {} } = {}) {
   const pose = poseOf(api, state);
   const fill = recipe.fill ?? "#ff5ec8";
   const hole = HOLE;
-  const chrome = recipe.skin === "gummy" || recipe.finish === "gummy";
   const mapFn = mapFnFor({ ...pose, faceOx: recipe.face?.ox, faceOy: recipe.face?.oy });
   const silOpts = {};
   if (pose.earL != null) silOpts.earL = pose.earL;
@@ -75,33 +73,16 @@ export function renderEngineSvg(recipe, { state = "idle", motion = {} } = {}) {
   const face = { size: 1.28, gap: 2.55, height: 1, eyeWidth: 0.82, eyeHeight: 1.32, ...(recipe.face ?? {}) };
   const eyeL = eyePathAt(mapFn, -1, openY, size, pose.gazeX ?? 0, pose.gazeY ?? 0, pose.turn ?? 0, pose.tilt ?? 0, 1, face);
   const eyeR = eyePathAt(mapFn, 1, openY, size, pose.gazeX ?? 0, pose.gazeY ?? 0, pose.turn ?? 0, pose.tilt ?? 0, 1, face);
-  const clipId = "hblob-clip";
-  const mouth = chrome ? mouthPath(pose.turn ?? 0, pose.tilt ?? 0) : "";
-  const turn = pose.turn ?? 0;
-  const tilt = pose.tilt ?? 0;
-  const layers = chromeRasterEllipses((x, y) => mapPoint(x, y, turn, tilt), {
-    on: chrome,
-    well: hole,
-    prefix: "hblob",
-  });
+  const plateL = eyePathAt(mapFn, -1, openY, size, pose.gazeX ?? 0, pose.gazeY ?? 0, pose.turn ?? 0, pose.tilt ?? 0, 1, face, EYE_PLATE);
+  const plateR = eyePathAt(mapFn, 1, openY, size, pose.gazeX ?? 0, pose.gazeY ?? 0, pose.turn ?? 0, pose.tilt ?? 0, 1, face, EYE_PLATE);
+  const punched = `${bodyD}${eyeL}${eyeR}`;
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -15 259 259" width="384" height="384" shape-rendering="geometricPrecision">
-  <defs>
-    <clipPath id="${clipId}"><path d="${bodyD}"/></clipPath>
-    <filter id="hblob-eye-soft" x="-40%" y="-40%" width="180%" height="180%" color-interpolation-filters="sRGB">
-      <feGaussianBlur in="SourceGraphic" stdDeviation="0.5"/>
-    </filter>
-    ${chromeDefs("hblob")}
-  </defs>
   <g transform="${faceTransform(pose, motion)}">
-    <path d="${bodyD}" fill="${fill}"/>
-    <g clip-path="url(#${clipId})">
-      ${layers}
-      ${mouth ? `<path d="${mouth}" fill="${hole}" opacity="1"/>` : ""}
-    </g>
-    <path d="${eyeL}" fill="${hole}" stroke="${hole}" stroke-width="0.85" stroke-linejoin="round" vector-effect="non-scaling-stroke" filter="url(#hblob-eye-soft)"/>
-    <path d="${eyeR}" fill="${hole}" stroke="${hole}" stroke-width="0.85" stroke-linejoin="round" vector-effect="non-scaling-stroke" filter="url(#hblob-eye-soft)"/>
+    <path d="${plateL}" fill="${hole}"/>
+    <path d="${plateR}" fill="${hole}"/>
+    <path d="${punched}" fill="${fill}" fill-rule="evenodd"/>
   </g>
 </svg>`;
 }

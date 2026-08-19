@@ -10,13 +10,12 @@ import {
   eyeEllipse,
   eyeWidthScale,
   eyePathAt,
-  mouthPath,
+  EYE_PLATE,
   idleGazeTarget,
 } from "./face.js";
 import { blinkLid, blinkOpenY } from "./blink.js";
-import { CHROME_LAYERS, chromeDefs, chromeLiveMarkup } from "./chrome.js";
 import { drawFx } from "./overlays.js";
-import { MOUTHLESS as CATALOG_MOUTHLESS, WINK_ON, blinksOn as catalogBlinks, mergeStates } from "./poses.js";
+import { WINK_ON, blinksOn as catalogBlinks, mergeStates } from "./poses.js";
 
 const RING_N = 128;
 const SUBSTEP = 1 / 120;
@@ -34,21 +33,16 @@ function svgMarkup(clipId, holes = []) {
     .join("");
   return `<svg viewBox="-15 -15 259 259" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" shape-rendering="geometricPrecision">
   <defs>
-    <clipPath id="${clipId}"><path data-clip></path></clipPath>
-    <filter id="${clipId}-eye-soft" x="-40%" y="-40%" width="180%" height="180%" color-interpolation-filters="sRGB">
-      <feGaussianBlur in="SourceGraphic" stdDeviation="0.5"/>
-    </filter>
-    ${chromeDefs(clipId)}
+    <clipPath id="${clipId}" clip-rule="evenodd"><path data-clip></path></clipPath>
   </defs>
   <g data-face>
-    <path data-layer="body" fill="var(--fg)"/>
+    <path data-layer="eye-l" fill="var(--bg)"/>
+    <path data-layer="eye-r" fill="var(--bg)"/>
+    <path data-layer="body" fill="var(--fg)" fill-rule="evenodd"/>
     <g clip-path="url(#${clipId})">
-      ${chromeLiveMarkup(clipId, CX)}
       ${holePaths}
       <path data-layer="mouth" fill="var(--bg)" opacity="0"/>
     </g>
-    <path data-layer="eye-l" fill="var(--bg)" stroke="var(--bg)" stroke-width="0.85" stroke-linejoin="round" vector-effect="non-scaling-stroke" filter="url(#${clipId}-eye-soft)"/>
-    <path data-layer="eye-r" fill="var(--bg)" stroke="var(--bg)" stroke-width="0.85" stroke-linejoin="round" vector-effect="non-scaling-stroke" filter="url(#${clipId}-eye-soft)"/>
     <g data-fx>
       ${sats}${pings}${dots}
       <circle data-progress-track cx="${CX}" cy="${CX}" r="62" fill="none" stroke="var(--fg)" stroke-width="5" opacity="0"/>
@@ -75,12 +69,6 @@ svg {
   height: auto;
   overflow: visible;
   shape-rendering: geometricPrecision;
-}
-[data-layer="eye-l"], [data-layer="eye-r"] {
-  stroke: var(--bg);
-  stroke-width: 0.85;
-  stroke-linejoin: round;
-  vector-effect: non-scaling-stroke;
 }
 `;
 }
@@ -122,7 +110,6 @@ export function defineBlob(recipe) {
   const STATES = Object.keys(states);
   const face = { ...FACE, ...(recipe.face ?? {}) };
   const BLINK_MIN = recipe.blink?.min ?? 6000;
-  const mouthless = new Set([...(recipe.mouthless ?? []), ...CATALOG_MOUTHLESS]);
   const freezeOverlays = recipe.freezeOverlays ?? [];
   const params = recipe.params ?? {};
   const holes = Array.isArray(recipe.holes) ? recipe.holes : [];
@@ -131,7 +118,6 @@ export function defineBlob(recipe) {
   const upright = face.upright === true;
   const disk = sphere || upright;
   const radius = Number.isFinite(face.radius) ? face.radius : 72;
-  const finishFlat = recipe.finish === "flat";
 
   function radiusOf(op, opts = {}) {
     let r = op.r;
@@ -284,13 +270,12 @@ export function defineBlob(recipe) {
 
   class BlobElement extends ElementBase {
     static get observedAttributes() {
-      return ["state", "size", "follow", "paused", "skin"];
+      return ["state", "size", "follow", "paused"];
     }
 
     constructor() {
       super();
       this._state = STATES.includes("idle") ? "idle" : STATES[0];
-      this._skin = "flat";
       this._raf = 0;
       this._t0 = 0;
       this._last = 0;
@@ -318,7 +303,6 @@ export function defineBlob(recipe) {
         face: root.querySelector("[data-face]"),
         body: root.querySelector("[data-layer=body]"),
         clip: root.querySelector("[data-clip]"),
-        chrome: [...root.querySelectorAll("[data-chrome]")],
         eyeL: root.querySelector("[data-layer=eye-l]"),
         eyeR: root.querySelector("[data-layer=eye-r]"),
         mouth: root.querySelector("[data-layer=mouth]"),
@@ -337,13 +321,6 @@ export function defineBlob(recipe) {
     }
     set state(v) {
       this.setAttribute("state", v);
-    }
-
-    get skin() {
-      return this._skin;
-    }
-    set skin(v) {
-      this.setAttribute("skin", v === "gummy" ? "gummy" : "flat");
     }
 
     connectedCallback() {
@@ -372,9 +349,6 @@ export function defineBlob(recipe) {
       this.setAttribute("data-state", this._state);
       const size = this.getAttribute("size");
       if (size) this.style.width = `${Number(size)}px`;
-      const skinAttr = this.getAttribute("skin");
-      this._skin = skinAttr === "gummy" ? "gummy" : "flat";
-      this.setAttribute("data-skin", this._skin);
       const pose = poseDefaults(targetsFor(this._state));
       if (!this._snapped) {
         this._spr = poseSprings(pose);
@@ -553,20 +527,22 @@ export function defineBlob(recipe) {
         disk ? [CX + x, CX + y] : mapPoint(x, y, s.turn.x, s.tilt.x),
       );
       const d = pathFromRing(ring);
-      this._els.body.setAttribute("d", d);
-      this._els.clip.setAttribute("d", d);
-
       const openY = blinkOpenY(lid, pose.eyeScale);
       const winkClose = 0.06;
       const winkL = now < this._winkUntil && this._winkEye < 0 ? winkClose : 1;
       const winkR = now < this._winkUntil && this._winkEye > 0 ? winkClose : 1;
+      const holeL = eyePathAt(mapFn, -1, openY, s.eyeSize.x, s.gazeX.x, s.gazeY.x, s.turn.x, s.tilt.x, winkL, face);
+      const holeR = eyePathAt(mapFn, 1, openY, s.eyeSize.x, s.gazeX.x, s.gazeY.x, s.turn.x, s.tilt.x, winkR, face);
+      const punched = `${d}${holeL}${holeR}`;
+      this._els.body.setAttribute("d", punched);
+      this._els.clip.setAttribute("d", punched);
       this._els.eyeL.setAttribute(
         "d",
-        eyePathAt(mapFn, -1, openY, s.eyeSize.x, s.gazeX.x, s.gazeY.x, s.turn.x, s.tilt.x, winkL, face),
+        eyePathAt(mapFn, -1, openY, s.eyeSize.x, s.gazeX.x, s.gazeY.x, s.turn.x, s.tilt.x, winkL, face, EYE_PLATE),
       );
       this._els.eyeR.setAttribute(
         "d",
-        eyePathAt(mapFn, 1, openY, s.eyeSize.x, s.gazeX.x, s.gazeY.x, s.turn.x, s.tilt.x, winkR, face),
+        eyePathAt(mapFn, 1, openY, s.eyeSize.x, s.gazeX.x, s.gazeY.x, s.turn.x, s.tilt.x, winkR, face, EYE_PLATE),
       );
       for (const el of this._els.holes) {
         const spec = holes.find((h) => h.id === el.getAttribute("data-hole"));
@@ -574,23 +550,7 @@ export function defineBlob(recipe) {
         el.setAttribute("d", contourPath(mapFn, spec.cx, spec.cy, spec.rx, spec.ry, s.turn.x, s.tilt.x));
       }
 
-      const gummy = this._skin === "gummy";
-      const showMouth = gummy && !mouthless.has(this._state);
-      this._els.mouth.setAttribute("opacity", showMouth ? "1" : "0");
-      for (const el of this._els.chrome) {
-        const spec = CHROME_LAYERS.find((layer) => layer.id === el.getAttribute("data-chrome"));
-        if (!spec) continue;
-        el.setAttribute("opacity", gummy ? String(spec.op) : "0");
-        if (!gummy) continue;
-        const [cx, cy] = mapPoint(spec.x, spec.y, s.turn.x, s.tilt.x);
-        el.setAttribute("cx", cx.toFixed(2));
-        el.setAttribute("cy", cy.toFixed(2));
-        el.setAttribute("rx", String(spec.rx));
-        el.setAttribute("ry", String(spec.ry));
-      }
-      if (gummy) {
-        this._els.mouth.setAttribute("d", mouthPath(s.turn.x, s.tilt.x));
-      }
+      this._els.mouth.setAttribute("opacity", "0");
 
       const sy = s.scale.x * s.sy.x * (1 - s.tilt.x * 0.002);
       const sx = s.scale.x / Math.max(s.sy.x, 0.72);

@@ -250,14 +250,18 @@ export function eyePath(side, openY, size, gazeX, gazeY, turn, tilt, wink) {
   return contourPath(mapPoint, cx, cy, rx, ry, turn, tilt);
 }
 
-export function eyePathAt(mapFn, side, openY, size, gazeX, gazeY, turn, tilt, wink, face = FACE) {
+export function eyePathAt(mapFn, side, openY, size, gazeX, gazeY, turn, tilt, wink, face = FACE, pad = 0) {
   const gap = 22 * face.gap;
   const cx = clamp(side * gap * 0.5 + gazeX * 0.16, -42, 42);
   const cy = clamp(2 * face.height + gazeY * 0.14, -20, 16);
-  const rx = 10.2 * face.eyeWidth * face.size * size;
-  const ry = 10.2 * face.eyeHeight * face.size * size * Math.max(openY, 0.04) * wink;
+  const extra = Math.max(0, pad);
+  const rx = 10.2 * face.eyeWidth * face.size * size + extra;
+  const ry = 10.2 * face.eyeHeight * face.size * size * Math.max(openY, 0.04) * wink + extra;
   return contourPath(mapFn, cx, cy, rx, ry, turn, tilt);
 }
+
+/** Plate sits behind evenodd holes so the rim is one candy edge, not two fills. */
+export const EYE_PLATE = 0.8;
 
 export function mouthPath(turn, tilt) {
   const y = 24;
