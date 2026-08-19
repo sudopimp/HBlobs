@@ -125,8 +125,8 @@
         <label class="slide">Belly <input id="belly" type="range" min="8" max="100" value="62" /> <span id="belly-v">62</span></label>
         <h2>Skin</h2>
         <div class="chips" id="skins">
-          <button class="chip" data-skin="flat" aria-pressed="true">flat</button>
-          <button class="chip" data-skin="gummy">gummy</button>
+          <button class="chip" data-skin="flat">flat</button>
+          <button class="chip" data-skin="gummy" aria-pressed="true">gummy</button>
         </div>
         <h2>State</h2>
         <div class="chips" id="states">
@@ -285,6 +285,7 @@
           face: r.face,
           states: r.states,
           fill: r.fill,
+          finish: r.skin === "flat" ? "flat" : "gummy",
         });
         const el = document.createElement(tag);
         el.setAttribute("size", "260");

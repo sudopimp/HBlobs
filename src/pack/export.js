@@ -3,7 +3,7 @@ import { spawnSync } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { HOLE } from "./const.js";
-import { buildCells } from "./geometry.js";
+import { buildEngineFrames } from "./engine-frame.js";
 import { hexToRgba, petMeta, saveRecipe, writePetJson } from "./recipe.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -18,7 +18,7 @@ export function exportPack(packDir, recipe) {
     fill: hexToRgba(recipe.fill),
     hole: hexToRgba(HOLE),
     outDir: packDir,
-    cells: buildCells(recipe),
+    cells: buildEngineFrames(recipe),
   };
 
   const r = spawnSync("python3", [WRITER], {

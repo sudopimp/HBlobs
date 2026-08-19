@@ -80,7 +80,7 @@ function stepIdle(n) {
   return out;
 }
 
-function posesFor(rowName, count) {
+export function posesFor(rowName, count) {
   switch (rowName) {
     case "idle":
       return stepIdle(count);

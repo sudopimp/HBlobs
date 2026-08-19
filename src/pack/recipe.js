@@ -147,7 +147,8 @@ export function ensurePackRecipe(recipe) {
   const next = JSON.parse(JSON.stringify(recipe ?? {}));
   next.schemaVersion = next.schemaVersion ?? 0;
   next.tag = next.tag || "hblob-pet";
-  next.finish = next.finish || "flat";
+  next.finish = next.finish || "gummy";
+  next.skin = next.skin || "gummy";
   next.face = {
     size: 1.28,
     gap: 2.55,
