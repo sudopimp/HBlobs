@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>HBlobs embed</title>
+    <style>
+      html, body { margin: 0; background: #0b0b0a; color: #f3efe6; font: 14px/1.45 ui-sans-serif, system-ui, sans-serif; }
+      body { padding: 24px; max-width: 40rem; }
+      #host { width: 240px; }
+      button { margin: 4px 4px 0 0; }
+      code { font-family: ui-monospace, Menlo, monospace; font-size: 12px; color: #f3efe688; }
+    </style>
+  </head>
+  <body>
+    <!--
+      Embed contract
+      attributes: state, size, follow, paused, skin
+      CSS: --blob-fill, --blob-eye
+      Default skin is flat. Candy volume is skin=gummy.
+    -->
+    <div id="host"></div>
+    <p>
+      <button data-state="idle">idle</button>
+      <button data-state="listening">listening</button>
+      <button data-state="thinking">thinking</button>
+      <button data-state="working">working</button>
+      <button data-state="failed">failed</button>
+    </p>
+    <p>
+      <button data-skin="flat">flat</button>
+      <button data-skin="gummy">gummy</button>
+    </p>
+    <p><code>state · size · follow · paused · skin · --blob-fill · --blob-eye</code></p>
+    <script type="module">
+      import { baseRecipe, mountBlob } from "./stage.mjs";
+      const host = document.getElementById("host");
+      let el = mountBlob(host, baseRecipe(), { size: 240, state: "idle", follow: true, skin: "flat" });
+      document.body.addEventListener("click", (ev) => {
+        const s = ev.target.closest("[data-state]");
+        if (s && el) el.setAttribute("state", s.dataset.state);
+        const k = ev.target.closest("[data-skin]");
+        if (k) el = mountBlob(host, baseRecipe(), { size: 240, state: el?.state || "idle", follow: true, skin: k.dataset.skin });
+      });
+    </script>
+  </body>
+</html>

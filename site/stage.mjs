@@ -1,104 +1,15 @@
 /**
- * Live studio — mounts defineBlob. Browser-only. No Node imports.
- * Looks and colors go through applyLook (unknown tokens throw).
+ * Live studio — mounts defineBlob. Browser-only.
  */
 import { defineBlob } from "../src/engine/define-blob.js";
 import { FACE } from "../src/engine/face.js";
 import { applyLook } from "../src/engine/looks.js";
+import { PRODUCT_POSES, STATE_GROUPS } from "../src/engine/poses.js";
 
+export { STATE_GROUPS };
 export const COLORS = ["pink", "teal", "purple", "yellow", "blue", "orange"];
 export const LOOKS = ["fatter", "thinner", "taller", "melt"];
-export const STATES = [
-  "idle",
-  "waving",
-  "jumping",
-  "waiting",
-  "running",
-  "review",
-  "failed",
-];
-
-const POSES = {
-  idle: {
-    turn: -16,
-    tilt: -7,
-    roll: 12,
-    scale: 1.09,
-    eyeScale: 1.28,
-    gazeX: 0,
-    gazeY: 0,
-    earL: 1.2,
-    earR: 1.18,
-  },
-  waving: {
-    turn: -8,
-    tilt: -10,
-    roll: 14,
-    scale: 1.1,
-    eyeScale: 1.3,
-    gazeX: 6,
-    gazeY: -4,
-    earL: 1.42,
-    earR: 1.08,
-  },
-  jumping: {
-    turn: -4,
-    tilt: -12,
-    roll: 6,
-    scale: 1.08,
-    eyeScale: 1.32,
-    gazeX: 0,
-    gazeY: -6,
-    earL: 1.28,
-    earR: 1.28,
-    bounce: 0.8,
-  },
-  waiting: {
-    turn: -12,
-    tilt: 2,
-    roll: 8,
-    scale: 1.04,
-    eyeScale: 1.12,
-    gazeX: 4,
-    gazeY: 2,
-    earL: 1.14,
-    earR: 1.2,
-  },
-  running: {
-    turn: 10,
-    tilt: 4,
-    roll: 6,
-    scale: 1.0,
-    eyeScale: 1.2,
-    gazeX: 12,
-    gazeY: 4,
-    earL: 0.9,
-    earR: 1.4,
-  },
-  review: {
-    turn: -20,
-    tilt: -4,
-    roll: 4,
-    scale: 1.06,
-    eyeScale: 1.18,
-    gazeX: 8,
-    gazeY: -2,
-    earL: 1.1,
-    earR: 1.22,
-  },
-  failed: {
-    turn: 8,
-    tilt: 14,
-    roll: -6,
-    scale: 0.96,
-    eyeScale: 0.72,
-    gazeX: 2,
-    gazeY: 8,
-    earL: 0.94,
-    earR: 0.94,
-    shake: 0.35,
-  },
-};
+export const STATES = Object.keys(PRODUCT_POSES);
 
 const GUMMY_BODY = [
   { type: "circle", id: "head", x: 0, y: 4, r: 64 },
@@ -117,29 +28,29 @@ export function baseRecipe() {
     schemaVersion: 0,
     tag: "studio-blob",
     fill: "#e84a9a",
-    finish: "gummy",
-    skin: "gummy",
+    finish: "flat",
+    skin: "flat",
     face: { ...FACE },
-    states: structuredClone(POSES),
+    states: structuredClone(PRODUCT_POSES),
     body: structuredClone(GUMMY_BODY),
   };
 }
 
-export function mountBlob(host, recipe, { size = 420, state = "idle", follow = false } = {}) {
+export function mountBlob(host, recipe, { size = 420, state = "idle", follow = false, skin = "flat" } = {}) {
   const tag = `studio-blob-${++seq}`;
   const next = {
     ...recipe,
     tag,
-    finish: "gummy",
-    skin: "gummy",
+    finish: skin === "gummy" ? "gummy" : "flat",
+    skin,
     face: { ...FACE, ...(recipe.face ?? {}) },
-    states: { ...POSES, ...(recipe.states ?? {}) },
+    states: { ...PRODUCT_POSES, ...(recipe.states ?? {}) },
   };
   defineBlob(next);
   const el = document.createElement(tag);
-  el.setAttribute("skin", "gummy");
+  el.setAttribute("skin", skin === "gummy" ? "gummy" : "flat");
   el.setAttribute("size", String(size));
-  el.setAttribute("state", POSES[state] ? state : "idle");
+  el.setAttribute("state", PRODUCT_POSES[state] ? state : "idle");
   if (follow) el.setAttribute("follow", "");
   host.replaceChildren(el);
   return el;

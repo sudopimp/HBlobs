@@ -16,6 +16,7 @@ import {
 import { blinkLid, blinkOpenY } from "./blink.js";
 import { CHROME_LAYERS, chromeDefs, chromeLiveMarkup } from "./chrome.js";
 import { drawFx } from "./overlays.js";
+import { MOUTHLESS as CATALOG_MOUTHLESS, WINK_ON, blinksOn as catalogBlinks, mergeStates } from "./poses.js";
 
 const RING_N = 128;
 const SUBSTEP = 1 / 120;
@@ -108,11 +109,11 @@ export function defineBlob(recipe) {
     throw new Error("recipe body is required");
   }
 
-  const states = recipe.states ?? {};
+  const states = mergeStates(recipe.states);
   const STATES = Object.keys(states);
   const face = { ...FACE, ...(recipe.face ?? {}) };
   const BLINK_MIN = recipe.blink?.min ?? 6000;
-  const mouthless = new Set(recipe.mouthless ?? []);
+  const mouthless = new Set([...(recipe.mouthless ?? []), ...CATALOG_MOUTHLESS]);
   const freezeOverlays = recipe.freezeOverlays ?? [];
   const params = recipe.params ?? {};
   const holes = Array.isArray(recipe.holes) ? recipe.holes : [];
@@ -268,10 +269,8 @@ export function defineBlob(recipe) {
   function blinksOn(state) {
     const pose = states[state];
     if (!pose) throw new Error(`unknown state: ${state}`);
-    if (Array.isArray(recipe.blink?.on)) return recipe.blink.on.includes(state);
-    if (Array.isArray(recipe.blink?.off) && recipe.blink.off.includes(state)) return false;
     if (freezeOverlays.includes(pose.overlay)) return false;
-    return true;
+    return catalogBlinks(state, recipe);
   }
 
   class BlobElement extends ElementBase {
@@ -282,7 +281,7 @@ export function defineBlob(recipe) {
     constructor() {
       super();
       this._state = STATES.includes("idle") ? "idle" : STATES[0];
-      this._skin = finishFlat ? "flat" : "gummy";
+      this._skin = "flat";
       this._raf = 0;
       this._t0 = 0;
       this._last = 0;
@@ -294,6 +293,9 @@ export function defineBlob(recipe) {
       this._blinkT0 = 0;
       this._nextBlink = BLINK_MIN + Math.random() * BLINK_SPAN;
       this._double = false;
+      this._winkUntil = 0;
+      this._winkEye = 0;
+      this._nextWink = 4500 + Math.random() * 5500;
       this._snapped = false;
       this._gazeState = null;
       this._onMove = (ev) => {
@@ -362,7 +364,7 @@ export function defineBlob(recipe) {
       const size = this.getAttribute("size");
       if (size) this.style.width = `${Number(size)}px`;
       const skinAttr = this.getAttribute("skin");
-      this._skin = skinAttr === "flat" ? "flat" : skinAttr === "gummy" ? "gummy" : finishFlat ? "flat" : "gummy";
+      this._skin = skinAttr === "gummy" ? "gummy" : "flat";
       this.setAttribute("data-skin", this._skin);
       const pose = poseDefaults(targetsFor(this._state));
       if (!this._snapped) {
@@ -461,6 +463,11 @@ export function defineBlob(recipe) {
           else lid = k;
         }
       }
+      if (!reduce && !this._blinkT0 && WINK_ON.has(this._state) && now > this._nextWink) {
+        this._winkUntil = now + 180;
+        this._winkEye = Math.random() < 0.5 ? -1 : 1;
+        this._nextWink = now + 4500 + Math.random() * 5500;
+      }
 
       if (reduce) {
         turnT = pose.turn;
@@ -541,13 +548,16 @@ export function defineBlob(recipe) {
       this._els.clip.setAttribute("d", d);
 
       const openY = blinkOpenY(lid, pose.eyeScale);
+      const winkClose = 0.06;
+      const winkL = now < this._winkUntil && this._winkEye < 0 ? winkClose : 1;
+      const winkR = now < this._winkUntil && this._winkEye > 0 ? winkClose : 1;
       this._els.eyeL.setAttribute(
         "d",
-        eyePathAt(mapFn, -1, openY, s.eyeSize.x, s.gazeX.x, s.gazeY.x, s.turn.x, s.tilt.x, 1, face),
+        eyePathAt(mapFn, -1, openY, s.eyeSize.x, s.gazeX.x, s.gazeY.x, s.turn.x, s.tilt.x, winkL, face),
       );
       this._els.eyeR.setAttribute(
         "d",
-        eyePathAt(mapFn, 1, openY, s.eyeSize.x, s.gazeX.x, s.gazeY.x, s.turn.x, s.tilt.x, 1, face),
+        eyePathAt(mapFn, 1, openY, s.eyeSize.x, s.gazeX.x, s.gazeY.x, s.turn.x, s.tilt.x, winkR, face),
       );
       for (const el of this._els.holes) {
         const spec = holes.find((h) => h.id === el.getAttribute("data-hole"));
@@ -555,7 +565,7 @@ export function defineBlob(recipe) {
         el.setAttribute("d", contourPath(mapFn, spec.cx, spec.cy, spec.rx, spec.ry, s.turn.x, s.tilt.x));
       }
 
-      const gummy = !finishFlat && this._skin === "gummy";
+      const gummy = this._skin === "gummy";
       const showMouth = gummy && !mouthless.has(this._state);
       this._els.mouth.setAttribute("opacity", showMouth ? "1" : "0");
       for (const el of this._els.chrome) {

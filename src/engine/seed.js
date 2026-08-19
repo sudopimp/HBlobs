@@ -41,6 +41,8 @@ export function recipeFromSeed(seed) {
       { type: "circle", id: "belly", x: 0, y: bellyY, r: bellyR },
       { type: "smin", id: "mass", a: "head", b: "belly", k },
     ],
+    finish: "flat",
+    skin: "flat",
     states: { idle: {} },
   };
 }

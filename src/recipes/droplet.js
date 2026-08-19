@@ -2,6 +2,8 @@
 export const recipe = {
   schemaVersion: 0,
   tag: "drop-blob",
+  finish: "flat",
+  skin: "flat",
   body: [
     { type: "circle", id: "head", x: 0, y: 0, r: 56 },
     { type: "circle", id: "belly", x: 0, y: 28, r: 52 },

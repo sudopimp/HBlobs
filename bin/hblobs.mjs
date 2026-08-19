@@ -44,6 +44,19 @@ function cmdFatter() {
   console.log("look=fatter");
 }
 
+function cmdSkin(args) {
+  const token = String(args[0] ?? "").toLowerCase();
+  if (token !== "flat" && token !== "gummy") {
+    console.error("usage: hblobs skin <flat|gummy>");
+    process.exit(2);
+  }
+  const recipe = workingRecipe(DEFAULT_PACK);
+  recipe.skin = token;
+  recipe.finish = token;
+  saveRecipe(DEFAULT_PACK, ensurePackRecipe(recipe));
+  console.log(`skin=${token}`);
+}
+
 function cmdExport(args) {
   const dir = packDirFrom(args);
   const recipe = workingRecipe(dir === DEFAULT_PACK ? DEFAULT_PACK : dir);
@@ -74,6 +87,7 @@ const commands = {
   new: cmdNew,
   color: cmdColor,
   fatter: cmdFatter,
+  skin: cmdSkin,
   export: cmdExport,
   adopt: cmdAdopt,
 };
@@ -81,7 +95,7 @@ const commands = {
 const verb = process.argv[2];
 const fn = commands[verb];
 if (!fn) {
-  console.error("usage: hblobs <new|color|fatter|export|adopt>");
+  console.error("usage: hblobs <new|color|fatter|skin|export|adopt>");
   process.exit(2);
 }
 fn(process.argv.slice(3));

@@ -63,7 +63,7 @@ export function renderEngineSvg(recipe, { state = "idle", motion = {} } = {}) {
   const pose = poseOf(api, state);
   const fill = recipe.fill ?? "#ff5ec8";
   const hole = HOLE;
-  const chrome = recipe.finish !== "flat" && recipe.skin !== "flat";
+  const chrome = recipe.skin === "gummy" || recipe.finish === "gummy";
   const mapFn = mapFnFor({ ...pose, faceOx: recipe.face?.ox, faceOy: recipe.face?.oy });
   const silOpts = {};
   if (pose.earL != null) silOpts.earL = pose.earL;

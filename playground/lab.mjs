@@ -3,6 +3,7 @@
  * Templates are hardcoded objects. Query parsing lives in loadQuery.
  */
 import { smin, traceSdf } from "../src/engine/sdf.js";
+import { STATE_GROUPS } from "../src/engine/poses.js";
 
 const RING_N = 128;
 const MAGENTA = "#e84a9a";
@@ -11,17 +12,23 @@ const TEAL = "#2ec4b6";
 const FACE_GUMMY = { size: 1.0, gap: 2.20, height: 0.55, eyeWidth: 0.82, eyeHeight: 1.32 };
 const FACE_DROPLET = { size: 0.95, gap: 2.0, height: 0.4, eyeWidth: 0.82, eyeHeight: 1.32 };
 
-const CORE_STATES = {
-  idle: {},
-  run: {},
-  failed: {},
-};
+export const LAB_STATES = [
+  "idle",
+  "listening",
+  "thinking",
+  "working",
+  "run",
+  "failed",
+  ...STATE_GROUPS.lifecycle.filter((s) => !["idle"].includes(s)),
+].filter((s, i, a) => a.indexOf(s) === i);
+
+const CORE_STATES = Object.fromEntries(LAB_STATES.map((s) => [s, {}]));
 
 const DROPLET = {
   schemaVersion: 0,
   tag: "droplet-blob",
   template: "droplet",
-  skin: "gummy",
+  skin: "flat",
   state: "idle",
   fill: TEAL,
   face: { ...FACE_DROPLET },
@@ -37,7 +44,7 @@ const GUMMY = {
   schemaVersion: 0,
   tag: "gummy-blob",
   template: "gummy",
-  skin: "gummy",
+  skin: "flat",
   state: "idle",
   fill: MAGENTA,
   face: { ...FACE_GUMMY },
@@ -69,6 +76,7 @@ function hydrate(recipe) {
   }
   if (!recipe.fill) recipe.fill = recipe.template === "droplet" ? TEAL : MAGENTA;
   if (!recipe.state) recipe.state = "idle";
+  if (recipe.skin !== "gummy") recipe.skin = "flat";
   return recipe;
 }
 
