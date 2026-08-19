@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>HBlobs demos</title>
+    <style>
+      :root {
+        --bg: #111113;
+        --ink: #f4f1ea;
+        --muted: #ffffff99;
+        --line: #ffffff18;
+        --pink: #ff5ec8;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 ui-sans-serif, system-ui, sans-serif; }
+      body { max-width: 980px; margin: 0 auto; padding: 36px 20px 80px; }
+      h1 { font-size: 28px; font-weight: 560; letter-spacing: -0.04em; margin: 0 0 8px; }
+      p { color: var(--muted); margin: 0 0 22px; }
+      a { color: var(--pink); }
+      .row { display: flex; flex-wrap: wrap; gap: 16px; margin: 0 0 36px; }
+      figure { margin: 0; padding: 12px; border: 1px solid var(--line); border-radius: 16px; background: #ffffff08; }
+      figure img { display: block; width: 192px; height: auto; }
+      figcaption { margin-top: 8px; font-size: 13px; color: var(--muted); }
+      .wide img { width: 100%; height: auto; }
+      pre {
+        background: #00000066;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 14px 16px;
+        overflow: auto;
+        color: #f4f1ea;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>HBlobs</h1>
+    <p>Real atlas pixels. Not image-gen. <a href="https://github.com/sudopimp/HBlobs">github.com/sudopimp/HBlobs</a></p>
+    <pre>hermes skills install sudopimp/HBlobs/skills/blob</pre>
+    <div class="row">
+      <figure><img src="idle.gif" alt="idle" /><figcaption>idle</figcaption></figure>
+      <figure><img src="walk.gif" alt="walk" /><figcaption>running-right</figcaption></figure>
+      <figure><img src="run.gif" alt="run" /><figcaption>run (CLI row)</figcaption></figure>
+      <figure><img src="wave.gif" alt="wave" /><figcaption>wave</figcaption></figure>
+      <figure><img src="jump.gif" alt="jump" /><figcaption>jump</figcaption></figure>
+    </div>
+    <p>Locked looks from one recipe:</p>
+    <figure class="wide"><img src="looks.png" alt="gummy chubby teal melt" /><figcaption>gummy · chubby · teal · melt</figcaption></figure>
+    <p>Full 8×9 contact sheet:</p>
+    <figure class="wide"><img src="atlas.png" alt="atlas contact sheet" /></figure>
+  </body>
+</html>

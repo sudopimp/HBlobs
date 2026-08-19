@@ -1,0 +1,5 @@
+{
+  "source": "dist/pack/spritesheet.webp plus scripts/export-demos.mjs variants",
+  "generated": "scripts/render-demos.py",
+  "note": "Pixels from the live SDF atlas, not image-gen."
+}
