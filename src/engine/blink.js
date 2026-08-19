@@ -13,7 +13,7 @@ export const BLINK_OPEN = 78;
 export const BLINK_GAP = 42;
 export const BLINK_ONE = BLINK_CLOSE + BLINK_HOLD + BLINK_OPEN;
 
-/** Lid multiplier: 1 = open, ~0.045 = closed line. null = sequence finished. */
+/** Lid multiplier: 1 = open, BLINK_SLIT = closed line. null = sequence finished. */
 export function blinkLid(bt, double) {
   const phase = (t) => {
     if (t < BLINK_CLOSE) return 1 - (1 - BLINK_SLIT) * blinkEaseIn(t / BLINK_CLOSE);
@@ -29,4 +29,13 @@ export function blinkLid(bt, double) {
   const second = bt - BLINK_ONE - BLINK_GAP;
   if (second < 0) return 1;
   return phase(second);
+}
+
+/**
+ * openY for the current lid. Mid-hold is the slit on the Y axis only.
+ * Do not multiply lid by eyeScale — that leaves a fat oval instead of a line.
+ */
+export function blinkOpenY(lid, eyeScale = 1) {
+  if (lid == null) return eyeScale;
+  return lid;
 }

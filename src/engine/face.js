@@ -6,6 +6,10 @@ const DEG = Math.PI / 180;
 export const FACE = { size: 1.28, gap: 2.55, height: 1, eyeWidth: 0.82, eyeHeight: 1.32 };
 /** Rest eye width = former scared size. Expressions close the lids; they do not shrink the holes. */
 export const EYE_REST = 1.28;
+/** Held chrome idle. Recipes may override. */
+export const IDLE_LEAN = { turn: -16, tilt: -7, roll: 12, scale: 1.09, eyeScale: 1.28, gazeX: 0, gazeY: 0 };
+/** Vertical stadium: taller than a circle. Matches contourPath's capsule branch. */
+export const STADIUM_MIN = 1.08;
 
 export function mapPoint(x, y, turn, tilt) {
   const yaw = turn * DEG;
@@ -28,9 +32,23 @@ export function mapPointSphere(x, y, turn, tilt, radius = 86) {
   return [CX + x * foreshort + dx, CX + y + dy];
 }
 
+export function isStadium(rx, ry) {
+  return ry > rx * STADIUM_MIN;
+}
+
+export function ensureStadium(rx, ry) {
+  if (isStadium(rx, ry)) return { rx, ry };
+  return { rx, ry: rx * STADIUM_MIN + Math.max(Math.abs(rx) * 1e-6, 1e-9) };
+}
+
+/** Idle gaze stays on the pose. No wander. */
+export function idleGazeTarget(pose = {}) {
+  return { x: pose.gazeX ?? 0, y: pose.gazeY ?? 0 };
+}
+
 export function contourPath(mapFn, cx, cy, rx, ry, turn, tilt) {
   const pts = [];
-  if (ry > rx * 1.08) {
+  if (isStadium(rx, ry)) {
     const h = ry - rx;
     const n = EYE_N;
     const half = n / 2;
@@ -82,6 +100,14 @@ export function eyeEllipse(side, openY, size, gazeX, gazeY, wink) {
 
 export function eyeWidthScale(eyeScale) {
   return Math.max(eyeScale, EYE_REST);
+}
+
+/** Rest hole: width from EYE_REST, openY = 1 so ry > rx * STADIUM_MIN. */
+export function eyeRestEllipse(side = -1, gazeX = 0, gazeY = 0) {
+  const size = eyeWidthScale(EYE_REST);
+  const e = eyeEllipse(side, 1, size, gazeX, gazeY, 1);
+  const { rx, ry } = ensureStadium(e.rx, e.ry);
+  return { ...e, rx, ry };
 }
 
 export function eyePath(side, openY, size, gazeX, gazeY, turn, tilt, wink) {
