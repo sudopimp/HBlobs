@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>HBlobs maker</title>
+    <style>
+      :root {
+        --bg: #111110;
+        --fg: #e84a9a;
+        --ink: #f2f2f2;
+        --muted: #ffffff8c;
+        --line: #ffffff1f;
+        --chip: #ffffff0f;
+        --chip-on: #ffffff22;
+        --blob-eye: #111110;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.45 ui-sans-serif, system-ui, sans-serif; }
+      body { min-height: 100vh; padding: 28px 22px 64px; }
+      h1 { font-size: 22px; font-weight: 560; letter-spacing: -0.03em; margin: 0 0 6px; }
+      p.lead { color: var(--muted); margin: 0 0 28px; max-width: 52rem; }
+      .hero {
+        display: grid;
+        grid-template-columns: minmax(220px, 340px) 1fr;
+        gap: 32px;
+        align-items: start;
+      }
+      .stage {
+        display: grid;
+        place-items: center;
+        min-height: 320px;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: #ffffff08;
+      }
+      .stage svg { width: 280px; height: 280px; overflow: visible; }
+      .ghost { fill: #ffffff14; stroke: #ffffff55; stroke-width: 1.6; cursor: grab; }
+      .ghost:active { cursor: grabbing; }
+      h2 { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 18px 0 10px; }
+      h2:first-child { margin-top: 0; }
+      .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+      button.chip, a.chip {
+        appearance: none;
+        border: 1px solid var(--line);
+        background: var(--chip);
+        color: var(--ink);
+        border-radius: 999px;
+        padding: 6px 11px;
+        font: inherit;
+        cursor: pointer;
+        text-decoration: none;
+      }
+      button.chip[aria-pressed="true"] { background: var(--chip-on); border-color: #ffffff55; }
+      button.cta {
+        appearance: none;
+        border: 0;
+        background: var(--fg);
+        color: #111110;
+        border-radius: 999px;
+        padding: 10px 18px;
+        font: inherit;
+        font-weight: 650;
+        cursor: pointer;
+        margin-top: 18px;
+      }
+      label.slide {
+        display: grid;
+        grid-template-columns: 9.5rem 1fr 2.4rem;
+        gap: 10px;
+        align-items: center;
+        margin: 8px 0;
+        color: var(--ink);
+      }
+      label.slide span { color: var(--muted); font-variant-numeric: tabular-nums; }
+      input[type="range"] { width: 100%; accent-color: var(--fg); }
+      details {
+        margin-top: 14px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 8px 12px;
+        background: var(--chip);
+      }
+      summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+      pre {
+        margin: 8px 0 4px;
+        white-space: pre-wrap;
+        word-break: break-word;
+        font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+        color: #d7d7d2;
+      }
+      @media (max-width: 720px) {
+        .hero { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Maker</h1>
+    <p class="lead">
+      Arrastrá las masas, regulá las orejas y la gordura, y descargá un PNG.
+      El blob ya está en <b>idle</b>. JSON queda plegado para quien lo necesite.
+    </p>
+    <div class="hero">
+      <div class="stage">
+        <svg id="stage" viewBox="-150 -150 300 300" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <g id="blob" data-state="idle">
+            <path id="body" fill="var(--fg)" />
+            <ellipse id="gloss" cx="-14" cy="-16" rx="24" ry="13" fill="#fff" opacity="0" />
+            <ellipse id="eye-l" cx="-22" cy="-4" rx="14" ry="18" fill="var(--bg)" />
+            <ellipse id="eye-r" cx="22" cy="-4" rx="14" ry="18" fill="var(--bg)" />
+          </g>
+          <g id="ghosts"></g>
+        </svg>
+      </div>
+      <div class="panel">
+        <h2>Plantilla</h2>
+        <div class="chips" id="templates">
+          <button class="chip" data-template="gummy" aria-pressed="true">gummy</button>
+          <button class="chip" data-template="droplet">gota</button>
+        </div>
+        <h2>Forma</h2>
+        <label class="slide">Oreja izquierda <input id="earL" type="range" min="0" max="100" value="50" /> <span id="earL-v">50</span></label>
+        <label class="slide">Oreja derecha <input id="earR" type="range" min="0" max="100" value="50" /> <span id="earR-v">50</span></label>
+        <label class="slide">Gordura <input id="belly" type="range" min="8" max="100" value="62" /> <span id="belly-v">62</span></label>
+        <h2>Skin</h2>
+        <div class="chips" id="skins">
+          <button class="chip" data-skin="flat" aria-pressed="true">flat</button>
+          <button class="chip" data-skin="gummy">gummy</button>
+        </div>
+        <h2>Estado</h2>
+        <div class="chips" id="states">
+          <button class="chip" data-state="idle" aria-pressed="true">idle</button>
+          <button class="chip" data-state="searching">searching</button>
+          <button class="chip" data-state="working">working</button>
+          <button class="chip" data-state="notifying">notifying</button>
+          <button class="chip" data-state="alerting">alerting</button>
+        </div>
+        <h2>Acciones</h2>
+        <div class="chips">
+          <button class="chip" id="undo" type="button">Deshacer</button>
+          <button class="chip" id="reset" type="button">Reset</button>
+          <button class="chip" id="random" type="button">Al azar</button>
+        </div>
+        <button class="cta" id="png" type="button">Descargar PNG</button>
+        <details>
+          <summary>Snippet</summary>
+          <pre id="snip"></pre>
+        </details>
+        <details>
+          <summary>JSON</summary>
+          <pre id="json"></pre>
+        </details>
+      </div>
+    </div>
+    <script type="module">
+      import {
+        applyTemplate,
+        serializeRecipe,
+        setSlider,
+        compileSilhouette,
+        ringYMid,
+        loadQuery,
+        shareSearch,
+      } from "./lab.mjs";
+      import { pathFromRing } from "../src/engine/face.js";
+
+      const STATES = ["idle", "searching", "working", "notifying", "alerting"];
+      const stage = document.getElementById("stage");
+      const body = document.getElementById("body");
+      const ghosts = document.getElementById("ghosts");
+      const gloss = document.getElementById("gloss");
+      const blob = document.getElementById("blob");
+      const snip = document.getElementById("snip");
+      const jsonPre = document.getElementById("json");
+      const sliders = {
+        earL: document.getElementById("earL"),
+        earR: document.getElementById("earR"),
+        belly: document.getElementById("belly"),
+      };
+
+      let history = [];
+      let drag = null;
+      let sharing = false;
+
+      if (!loadQuery(location.search)) applyTemplate("gummy");
+
+      function recipe() {
+        return serializeRecipe();
+      }
+
+      function pushHist() {
+        history.push(structuredClone(recipe()));
+        if (history.length > 48) history.shift();
+      }
+
+      function templateOf(r) {
+        if (r.template) return r.template;
+        return r.body?.some((n) => n.id === "earL" || n.id === "earR") ? "gummy" : "droplet";
+      }
+
+      function syncSliders() {
+        const r = recipe();
+        const belly = r.body.find((n) => n.type === "circle" && (n.id === "belly" || n.id === "base"));
+        const earL = r.body.find((n) => n.type === "circle" && n.id === "earL");
+        const earR = r.body.find((n) => n.type === "circle" && n.id === "earR");
+        sliders.belly.value = String(Math.round(belly?.r ?? 62));
+        sliders.earL.value = String(Math.round((earL?.r ?? 0) / 0.36));
+        sliders.earR.value = String(Math.round((earR?.r ?? 0) / 0.36));
+        sliders.earL.disabled = !earL;
+        sliders.earR.disabled = !earR;
+        document.getElementById("belly-v").textContent = sliders.belly.value;
+        document.getElementById("earL-v").textContent = sliders.earL.value;
+        document.getElementById("earR-v").textContent = sliders.earR.value;
+      }
+
+      function svgPoint(ev) {
+        const pt = stage.createSVGPoint();
+        pt.x = ev.clientX;
+        pt.y = ev.clientY;
+        return pt.matrixTransform(stage.getScreenCTM().inverse());
+      }
+
+      function paint() {
+        const r = recipe();
+        const ring = compileSilhouette(r);
+        if (ring.length) body.setAttribute("d", pathFromRing(ring));
+        const mid = ringYMid();
+        const skin = r.skin === "gummy" ? "gummy" : "flat";
+        const state = STATES.includes(r.state) ? r.state : "idle";
+        r.skin = skin;
+        r.state = state;
+        gloss.setAttribute("opacity", skin === "gummy" ? "0.55" : "0");
+        blob.dataset.state = state;
+        const lean = state === "idle" ? -8 : state === "alerting" ? 6 : state === "searching" ? 10 : 0;
+        blob.setAttribute("transform", `rotate(${lean})`);
+        ghosts.replaceChildren();
+        for (const n of r.body) {
+          if (n.type !== "circle") continue;
+          const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+          c.setAttribute("class", "ghost");
+          c.setAttribute("data-id", n.id);
+          c.setAttribute("cx", String(n.x));
+          c.setAttribute("cy", String(n.y - mid));
+          c.setAttribute("r", String(Math.max(n.r, 6)));
+          c.addEventListener("pointerdown", (ev) => {
+            ev.preventDefault();
+            pushHist();
+            drag = { id: n.id };
+            c.setPointerCapture(ev.pointerId);
+          });
+          ghosts.append(c);
+        }
+        const tpl = templateOf(r);
+        document.querySelectorAll("#templates [data-template]").forEach((b) => {
+          b.setAttribute("aria-pressed", String(b.dataset.template === tpl));
+        });
+        document.querySelectorAll("#skins [data-skin]").forEach((b) => {
+          b.setAttribute("aria-pressed", String(b.dataset.skin === skin));
+        });
+        document.querySelectorAll("#states [data-state]").forEach((b) => {
+          b.setAttribute("aria-pressed", String(b.dataset.state === state));
+        });
+        snip.textContent =
+          tpl === "gummy"
+            ? `<gummy-blob state="${state}" skin="${skin}" size="128"></gummy-blob>\n\nimport "../src/gummy-blob.js";`
+            : `<!-- silueta compilada · ${shareSearch(r)} -->`;
+        jsonPre.textContent = JSON.stringify(r, null, 2);
+        syncSliders();
+        if (!sharing) {
+          sharing = true;
+          history.replaceState(null, "", shareSearch(r));
+          sharing = false;
+        }
+      }
+
+      stage.addEventListener("pointermove", (ev) => {
+        if (!drag) return;
+        const p = svgPoint(ev);
+        const node = recipe().body.find((n) => n.id === drag.id);
+        if (!node) return;
+        node.x = p.x;
+        node.y = p.y + ringYMid();
+        paint();
+      });
+      stage.addEventListener("pointerup", () => {
+        drag = null;
+      });
+      stage.addEventListener("pointercancel", () => {
+        drag = null;
+      });
+
+      for (const [name, el] of Object.entries(sliders)) {
+        el.addEventListener("pointerdown", () => pushHist());
+        el.addEventListener("input", () => {
+          setSlider(name, el.value);
+          paint();
+        });
+      }
+
+      document.getElementById("templates").addEventListener("click", (ev) => {
+        const b = ev.target.closest("[data-template]");
+        if (!b) return;
+        pushHist();
+        applyTemplate(b.dataset.template);
+        paint();
+      });
+      document.getElementById("skins").addEventListener("click", (ev) => {
+        const b = ev.target.closest("[data-skin]");
+        if (!b) return;
+        pushHist();
+        recipe().skin = b.dataset.skin;
+        paint();
+      });
+      document.getElementById("states").addEventListener("click", (ev) => {
+        const b = ev.target.closest("[data-state]");
+        if (!b) return;
+        pushHist();
+        recipe().state = b.dataset.state;
+        paint();
+      });
+      document.getElementById("undo").addEventListener("click", () => {
+        const prev = history.pop();
+        if (!prev) return;
+        const cur = recipe();
+        cur.schemaVersion = prev.schemaVersion;
+        cur.tag = prev.tag;
+        cur.template = prev.template;
+        cur.skin = prev.skin;
+        cur.state = prev.state;
+        cur.body = prev.body;
+        paint();
+      });
+      document.getElementById("reset").addEventListener("click", () => {
+        pushHist();
+        applyTemplate(templateOf(recipe()));
+        paint();
+      });
+      document.getElementById("random").addEventListener("click", () => {
+        pushHist();
+        setSlider("belly", 40 + Math.round(Math.random() * 50));
+        setSlider("earL", 25 + Math.round(Math.random() * 55));
+        setSlider("earR", 25 + Math.round(Math.random() * 55));
+        paint();
+      });
+      document.getElementById("png").addEventListener("click", () => {
+        const clone = stage.cloneNode(true);
+        clone.querySelector("#ghosts")?.remove();
+        const xml = new XMLSerializer().serializeToString(clone);
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          canvas.width = 512;
+          canvas.height = 512;
+          const ctx = canvas.getContext("2d");
+          ctx.fillStyle = "#111110";
+          ctx.fillRect(0, 0, 512, 512);
+          ctx.drawImage(img, 0, 0, 512, 512);
+          const a = document.createElement("a");
+          a.download = "blob.png";
+          a.href = canvas.toDataURL("image/png");
+          a.click();
+        };
+        img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(xml);
+      });
+
+      paint();
+    </script>
+  </body>
+</html>

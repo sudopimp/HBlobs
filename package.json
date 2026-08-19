@@ -1,0 +1,10 @@
+{
+  "name": "hblobs",
+  "version": "0.1.0",
+  "license": "MIT",
+  "type": "module",
+  "description": "SDF blob engine and Hermes pet pack writer. Independent project; not affiliated with Nous Research, Hermes Agent, or xAI.",
+  "bin": {
+    "hblobs": "./bin/hblobs.mjs"
+  }
+}
