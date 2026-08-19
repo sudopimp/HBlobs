@@ -2,7 +2,7 @@
   "algo": "sha256",
   "files": {
     "gates/craft-blink-slit.mjs": "13f41dd40411761213ac05b573e065565cfbbb098a267cc04964f4c88d5a58d2",
-    "gates/craft-capsule.mjs": "1ad38cf3bad01ba936c3b704f381665d2923f5d746e8abdd51d3ed245a34866e",
+    "gates/craft-capsule.mjs": "e00dda9fec7d69db2c249f13be599d1b9ef64f7496a6195413d23fe16ca0323b",
     "gates/craft-contain.mjs": "db2db1bdc849e4708f5c040aed77384570304c3866ed3cc3c101d5ef387100cb",
     "gates/craft-gaze-held.mjs": "f3d64183111428fcd28693e21cd324e584d8ae70b725df41a29a818643dcb2ab",
     "gates/craft-idle-lean.mjs": "c184bdb2fe5a1ed8732a51b8ae4a912bafe3857b074062548b9140e3d170d9ce",
