@@ -1,0 +1,555 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>HBlobs — the page is the engine</title>
+    <meta
+      name="description"
+      content="A living 2D SDF blob. Stadium-hole eyes, held lean, 2nd-order springs. Open this page and defineBlob is already running. Adopt into Hermes Agent."
+    />
+    <meta property="og:title" content="HBlobs — the page is the engine" />
+    <meta
+      property="og:description"
+      content="Live defineBlob, not a GIF. Stadium-hole eyes, held lean, springs. MIT."
+    />
+    <meta property="og:url" content="https://sudopimp.github.io/HBlobs/" />
+    <meta property="og:image" content="https://sudopimp.github.io/HBlobs/demos/hero.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href="demos/hero.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #0b0b0a;
+        --panel: #141412;
+        --ink: #f4f1ea;
+        --muted: #f4f1ea99;
+        --line: #ffffff18;
+        --pink: #e84a9a;
+        --teal: #5ad4c8;
+        --chip: #ffffff0d;
+        --chip-on: #ffffff22;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; background: var(--bg); color: var(--ink); }
+      body {
+        font: 16px/1.5 "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+        min-height: 100vh;
+      }
+      a { color: var(--teal); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+      code, pre, .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; }
+      nav {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        padding: 18px 28px;
+        border-bottom: 1px solid var(--line);
+        position: sticky;
+        top: 0;
+        background: #0b0b0acc;
+        backdrop-filter: blur(12px);
+        z-index: 4;
+      }
+      .word {
+        font-weight: 600;
+        letter-spacing: -0.04em;
+        font-size: 18px;
+      }
+      nav .sp { flex: 1; }
+      nav a, nav span {
+        color: var(--muted);
+        font-size: 13px;
+        text-decoration: none;
+      }
+      nav a:hover { color: var(--ink); }
+      .hero {
+        display: grid;
+        grid-template-columns: minmax(280px, 1fr) minmax(320px, 560px);
+        gap: 48px;
+        align-items: center;
+        padding: 48px 28px 36px;
+        max-width: 1180px;
+        margin: 0 auto;
+      }
+      .eyebrow {
+        font: 12px/1 "IBM Plex Mono", monospace;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--pink);
+        margin: 0 0 12px;
+      }
+      h1 {
+        font-size: clamp(36px, 6vw, 64px);
+        font-weight: 600;
+        letter-spacing: -0.055em;
+        line-height: 0.95;
+        margin: 0 0 16px;
+      }
+      .lead {
+        color: var(--muted);
+        max-width: 38rem;
+        margin: 0 0 26px;
+        font-size: 17px;
+      }
+      .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+      .cta, .ghost, button.chip {
+        appearance: none;
+        border: 0;
+        cursor: pointer;
+        font: inherit;
+      }
+      .cta {
+        background: var(--pink);
+        color: #16040d;
+        border-radius: 999px;
+        padding: 11px 18px;
+        font-weight: 600;
+        text-decoration: none;
+      }
+      .ghost {
+        background: transparent;
+        color: var(--ink);
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 10px 16px;
+        text-decoration: none;
+      }
+      .ghost:hover, .cta:hover { filter: brightness(1.08); }
+      pre.install {
+        margin: 22px 0 0;
+        padding: 12px 14px;
+        background: #00000066;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        overflow: auto;
+        font-size: 13px;
+        color: #f4f1ea;
+      }
+      .stage {
+        position: relative;
+        min-height: 520px;
+        border: 1px solid var(--line);
+        border-radius: 28px;
+        background:
+          radial-gradient(ellipse 68% 50% at 50% 38%, #3a1830 0%, transparent 64%),
+          linear-gradient(180deg, #171714 0%, #0d0d0c 100%);
+        overflow: hidden;
+      }
+      .stage::after {
+        content: "";
+        position: absolute;
+        left: 18%;
+        right: 18%;
+        bottom: 11%;
+        height: 28px;
+        background: radial-gradient(ellipse at center, #00000088 0%, transparent 72%);
+        pointer-events: none;
+      }
+      #hero-host {
+        position: relative;
+        z-index: 1;
+        display: grid;
+        place-items: center;
+        min-height: 420px;
+        padding: 28px 12px 8px;
+      }
+      #hero-host > * { width: min(440px, 86%); }
+      .caption {
+        position: relative;
+        z-index: 1;
+        text-align: center;
+        font: 12px/1.4 "IBM Plex Mono", monospace;
+        color: var(--muted);
+        padding: 0 16px 16px;
+        min-height: 2.8em;
+      }
+      .demo-cursor {
+        position: fixed;
+        width: 18px;
+        height: 18px;
+        margin: -4px 0 0 -4px;
+        border: 2px solid var(--ink);
+        border-radius: 50% 50% 50% 0;
+        transform: rotate(-28deg);
+        pointer-events: none;
+        z-index: 20;
+        opacity: 0;
+        transition: left 0.45s cubic-bezier(0.2, 0.8, 0.2, 1), top 0.45s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.2s;
+        box-shadow: 0 0 0 6px #e84a9a33;
+      }
+      .controls {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 0 28px 48px;
+        display: grid;
+        gap: 14px;
+      }
+      h2.k {
+        font: 12px/1 "IBM Plex Mono", monospace;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin: 8px 0 0;
+      }
+      .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+      button.chip {
+        border: 1px solid var(--line);
+        background: var(--chip);
+        color: var(--ink);
+        border-radius: 999px;
+        padding: 6px 12px;
+        font-size: 13px;
+      }
+      button.chip[aria-pressed="true"] {
+        background: var(--chip-on);
+        border-color: #ffffff55;
+      }
+      .room {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 8px 28px 64px;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 14px;
+      }
+      .card {
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        background: var(--panel);
+        min-height: 220px;
+        display: grid;
+        place-items: center;
+        padding: 12px;
+      }
+      .card > * { width: 88%; }
+      .copy {
+        max-width: 760px;
+        margin: 0 auto;
+        padding: 0 28px 80px;
+      }
+      .copy h2 {
+        font-size: 28px;
+        letter-spacing: -0.04em;
+        margin: 48px 0 12px;
+      }
+      .copy p, .copy li { color: var(--muted); }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+      }
+      th, td {
+        text-align: left;
+        border-top: 1px solid var(--line);
+        padding: 10px 8px;
+        vertical-align: top;
+      }
+      th { color: var(--ink); font-weight: 550; }
+      footer {
+        border-top: 1px solid var(--line);
+        padding: 22px 28px 40px;
+        color: var(--muted);
+        font-size: 13px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+      }
+      footer .sp { flex: 1; }
+      @media (max-width: 860px) {
+        .hero, .room { grid-template-columns: 1fr; }
+        nav { flex-wrap: wrap; }
+        .stage { min-height: 420px; }
+      }
+    </style>
+  </head>
+  <body>
+    <nav>
+      <span class="word">HBlobs</span>
+      <span class="mono">v0.1.0</span>
+      <span class="sp"></span>
+      <a href="playground/lab.html">Maker</a>
+      <a href="https://github.com/sudopimp/HBlobs">GitHub</a>
+      <a href="https://github.com/sudopimp/HBlobs/blob/main/LICENSE">MIT</a>
+    </nav>
+
+    <section class="hero">
+      <div>
+        <p class="eyebrow">2D SDF · live custom element</p>
+        <h1>The page is the engine.</h1>
+        <p class="lead">
+          This is <code>defineBlob</code> in the tab — stadium-hole eyes, a held
+          3D idle lean, gummy gloss, 2nd-order springs. Not a GIF. Not a prompt
+          raster. Move the pointer.
+        </p>
+        <div class="row">
+          <a class="cta" href="playground/lab.html">▶ Launch maker</a>
+          <button class="ghost" id="demo" type="button">▸ Demo the real UI</button>
+          <a class="ghost" href="https://github.com/sudopimp/HBlobs">Source</a>
+        </div>
+        <pre class="install">hermes skills install sudopimp/HBlobs/skills/blob</pre>
+      </div>
+      <div class="stage" id="stage">
+        <div id="hero-host"></div>
+        <p class="caption" id="say" aria-live="polite">
+          idle · gummy · follow · chrome face defaults
+        </p>
+      </div>
+    </section>
+
+    <div class="controls">
+      <h2 class="k">Color</h2>
+      <div class="chips" id="colors"></div>
+      <h2 class="k">Look</h2>
+      <div class="chips" id="looks"></div>
+      <h2 class="k">State</h2>
+      <div class="chips" id="states"></div>
+    </div>
+
+    <div class="room" id="room" aria-label="Four live recipes"></div>
+
+    <div class="copy">
+      <h2>What other makers actually ship</h2>
+      <p>
+        Fetched 2026-08-19. Sources and dates in
+        <a href="evidence/research/blob-pages-2026-08-19.md">evidence/research/blob-pages-2026-08-19.md</a>.
+        The pattern is the same: the website <em>is</em> the product.
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>Ship</th>
+            <th>Their page</th>
+            <th>We take</th>
+            <th>We refuse</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><a href="https://renato.design/glisten/">Glisten</a> v00000-248</td>
+            <td>Editorial landing, then ▶ launch the real SDF studio. ▸ Demo drives the live UI.</td>
+            <td>Landing launches the engine. Demo clicks these chips.</td>
+            <td>Their 3D raymarch, Rendre room, non-commercial app.</td>
+          </tr>
+          <tr>
+            <td><a href="https://www.blobmaker.app/">Blobmaker</a> / <a href="https://app.haikei.app/?generator=blob">Haikei</a></td>
+            <td>The homepage is the generator. Live SVG, dice, download.</td>
+            <td>Live mark first. Static loops stay in <a href="demos/index.html">demos/</a>.</td>
+            <td>Decorative SVG backgrounds as the product.</td>
+          </tr>
+          <tr>
+            <td><a href="https://www.dicebear.com/">DiceBear</a> blobs 10.x</td>
+            <td>Playground on the homepage. Seed → SVG instantly.</td>
+            <td>Locked color/look tokens, fail-closed.</td>
+            <td>Stacked-shape icons as a living pet.</td>
+          </tr>
+          <tr>
+            <td><a href="https://github.com/eykicuihb/KuroBlob-AI">KuroBlob-AI</a></td>
+            <td>Full web app (their README points at localhost:3000).</td>
+            <td>60fps live companion in the browser.</td>
+            <td><code>eval</code> of model-written Canvas.</td>
+          </tr>
+        </tbody>
+      </table>
+      <h2>Honest cell</h2>
+      <p>
+        We do not beat Glisten at CAD. We do not beat hatch-pet at “any otter from a
+        prompt.” We occupy the empty cell: <strong>2D SDF recipe + chrome face +
+        springs + slash mutate + Hermes pack</strong>.
+      </p>
+      <h2>Locked verbs</h2>
+      <p class="mono">
+        new · make · color · fatter · thinner · taller · rounder · add · undo · name · export · adopt · show · open
+      </p>
+      <p>
+        Unknown looks fail closed. <code>/blob adopt</code> copies into this process’s
+        <code>$HERMES_HOME/pets/</code>. Do not run
+        <code>hermes pets install &lt;your-slug&gt;</code> — that path is
+        <a href="https://hermes-agent.nousresearch.com/docs/user-guide/features/pets">gallery-only</a>.
+      </p>
+    </div>
+
+    <footer>
+      <span>MIT · 2026</span>
+      <span>Independent. Not affiliated with Nous Research, Hermes Agent, or xAI.</span>
+      <span class="sp"></span>
+      <a href="https://github.com/sudopimp/HBlobs">sudopimp/HBlobs</a>
+    </footer>
+    <div class="demo-cursor" id="cursor" hidden></div>
+
+    <script type="module">
+      import {
+        COLORS,
+        LOOKS,
+        STATES,
+        baseRecipe,
+        mountBlob,
+        tint,
+        sculpt,
+      } from "./site/stage.mjs";
+
+      const heroHost = document.getElementById("hero-host");
+      const say = document.getElementById("say");
+      const cursor = document.getElementById("cursor");
+      const colorBox = document.getElementById("colors");
+      const lookBox = document.getElementById("looks");
+      const stateBox = document.getElementById("states");
+      const room = document.getElementById("room");
+
+      let recipe = baseRecipe();
+      let color = "pink";
+      let look = null;
+      let state = "idle";
+      let hero = null;
+      let demoTimer = 0;
+      let demoing = false;
+
+      function chips(box, items, attr) {
+        box.replaceChildren();
+        for (const name of items) {
+          const b = document.createElement("button");
+          b.className = "chip";
+          b.type = "button";
+          b.dataset[attr] = name;
+          b.textContent = name;
+          box.append(b);
+        }
+      }
+
+      chips(colorBox, COLORS, "color");
+      chips(lookBox, ["reset", ...LOOKS], "look");
+      chips(stateBox, STATES, "state");
+
+      function press(box, attr, value) {
+        box.querySelectorAll("button").forEach((b) => {
+          b.setAttribute("aria-pressed", String(b.dataset[attr] === value));
+        });
+      }
+
+      function remount() {
+        hero = mountBlob(heroHost, recipe, { size: 440, state, follow: true });
+        const bits = [state, "gummy", color];
+        if (look) bits.push(look);
+        bits.push("follow");
+        say.textContent = bits.join(" · ");
+        press(colorBox, "color", color);
+        press(lookBox, "look", look ?? "reset");
+        press(stateBox, "state", state);
+      }
+
+      function applyColor(name) {
+        recipe = tint(baseRecipe(), name);
+        if (look && look !== "reset") recipe = sculpt(recipe, look);
+        color = name;
+        remount();
+      }
+
+      function applyLookName(name) {
+        if (name === "reset") {
+          look = null;
+          recipe = tint(baseRecipe(), color);
+        } else {
+          look = name;
+          recipe = sculpt(tint(baseRecipe(), color), name);
+        }
+        remount();
+      }
+
+      function applyState(name) {
+        state = name;
+        if (hero) hero.setAttribute("state", name);
+        say.textContent = [state, "gummy", color, look, "follow"].filter(Boolean).join(" · ");
+        press(stateBox, "state", state);
+      }
+
+      colorBox.addEventListener("click", (ev) => {
+        const b = ev.target.closest("[data-color]");
+        if (b) applyColor(b.dataset.color);
+      });
+      lookBox.addEventListener("click", (ev) => {
+        const b = ev.target.closest("[data-look]");
+        if (b) applyLookName(b.dataset.look);
+      });
+      stateBox.addEventListener("click", (ev) => {
+        const b = ev.target.closest("[data-state]");
+        if (b) applyState(b.dataset.state);
+      });
+
+      const guests = [
+        { color: "teal", state: "waving", size: 168 },
+        { color: "purple", state: "waiting", size: 168 },
+        { color: "yellow", state: "review", size: 168 },
+        { color: "blue", state: "jumping", size: 168 },
+      ];
+      for (const g of guests) {
+        const card = document.createElement("div");
+        card.className = "card";
+        room.append(card);
+        mountBlob(card, tint(baseRecipe(), g.color), { size: g.size, state: g.state });
+      }
+
+      function moveCursorTo(el) {
+        const r = el.getBoundingClientRect();
+        cursor.hidden = false;
+        cursor.style.opacity = "1";
+        cursor.style.left = `${r.left + r.width * 0.7}px`;
+        cursor.style.top = `${r.top + r.height * 0.55}px`;
+      }
+
+      function sleep(ms) {
+        return new Promise((resolve) => {
+          demoTimer = setTimeout(resolve, ms);
+        });
+      }
+
+      async function playDemo() {
+        if (demoing) return;
+        demoing = true;
+        document.getElementById("demo").textContent = "✕ Stop demo";
+        const acts = [
+          { el: stateBox.querySelector('[data-state="idle"]'), run: () => applyState("idle"), say: "held idle lean" },
+          { el: colorBox.querySelector('[data-color="teal"]'), run: () => applyColor("teal"), say: "locked color teal" },
+          { el: stateBox.querySelector('[data-state="waving"]'), run: () => applyState("waving"), say: "wave — same recipe" },
+          { el: lookBox.querySelector('[data-look="fatter"]'), run: () => applyLookName("fatter"), say: "fatter — radii scale" },
+          { el: stateBox.querySelector('[data-state="jumping"]'), run: () => applyState("jumping"), say: "jump squash" },
+          { el: colorBox.querySelector('[data-color="purple"]'), run: () => applyColor("purple"), say: "purple, still one SDF" },
+          { el: lookBox.querySelector('[data-look="reset"]'), run: () => applyLookName("reset"), say: "reset look" },
+          { el: colorBox.querySelector('[data-color="pink"]'), run: () => applyColor("pink"), say: "back to pink idle" },
+          { el: stateBox.querySelector('[data-state="idle"]'), run: () => applyState("idle"), say: "idle · gummy · follow · chrome face defaults" },
+        ];
+        try {
+          for (const act of acts) {
+            if (!demoing) break;
+            if (act.el) moveCursorTo(act.el);
+            await sleep(480);
+            if (!demoing) break;
+            act.run();
+            say.textContent = act.say;
+            await sleep(1600);
+          }
+        } finally {
+          cursor.style.opacity = "0";
+          demoing = false;
+          document.getElementById("demo").textContent = "▸ Demo the real UI";
+        }
+      }
+
+      document.getElementById("demo").addEventListener("click", () => {
+        if (demoing) {
+          demoing = false;
+          clearTimeout(demoTimer);
+          cursor.style.opacity = "0";
+          document.getElementById("demo").textContent = "▸ Demo the real UI";
+          return;
+        }
+        playDemo();
+      });
+
+      remount();
+    </script>
+  </body>
+</html>
