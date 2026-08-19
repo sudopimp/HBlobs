@@ -48,6 +48,8 @@ export function idleGazeTarget(pose = {}) {
 
 /** κ = 4/3 tan(π/8). One cubic per quarter-circle; error ~0.02% vs a true arc. */
 const KAPPA = 0.5522847498307936;
+/** iOS / Figma corner smoothing. 0 = hard stadium joins; 0.6 eases cap↔side (the red-circle kinks). */
+export const STADIUM_SMOOTH = 0.6;
 
 function mapped(mapFn, x, y, turn, tilt) {
   return mapFn(x, y, turn, tilt);
@@ -65,24 +67,122 @@ function lineTo(mapFn, x, y, turn, tilt) {
   return `L${fmt(mapped(mapFn, x, y, turn, tilt))}`;
 }
 
-/** Vertical stadium: two circular caps (4 cubics) + two straight sides. Pose-warped via mapFn. */
+function svgArcCenter(x1, y1, x2, y2, r, sweep) {
+  const dx = (x1 - x2) / 2;
+  const dy = (y1 - y2) / 2;
+  const sq = dx * dx + dy * dy;
+  let rad = r;
+  const cr = sq / (rad * rad);
+  if (cr > 1) rad *= Math.sqrt(cr);
+  const num = Math.max(0, rad * rad - sq);
+  const s = Math.sqrt(num / Math.max(sq, 1e-12));
+  const sign = sweep === 0 ? 1 : -1;
+  const cx = (x1 + x2) / 2 + sign * s * -dy;
+  const cy = (y1 + y2) / 2 + sign * s * dx;
+  const theta1 = Math.atan2(y1 - cy, x1 - cx);
+  let dtheta = Math.atan2(y2 - cy, x2 - cx) - theta1;
+  if (sweep === 0 && dtheta > 0) dtheta -= Math.PI * 2;
+  if (sweep === 1 && dtheta < 0) dtheta += Math.PI * 2;
+  return { cx, cy, theta1, dtheta, rad };
+}
+
+function arcToCubics(x1, y1, dx, dy, r, sweep) {
+  const x2 = x1 + dx;
+  const y2 = y1 + dy;
+  const { cx, cy, theta1, dtheta, rad } = svgArcCenter(x1, y1, x2, y2, r, sweep);
+  if (Math.abs(dtheta) < 1e-8) return [];
+  const n = Math.max(1, Math.ceil(Math.abs(dtheta) / (Math.PI / 2) - 1e-9));
+  const seg = dtheta / n;
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    const a0 = theta1 + seg * i;
+    const a1 = a0 + seg;
+    const k = (4 / 3) * Math.tan(seg / 4);
+    const p0x = cx + Math.cos(a0) * rad;
+    const p0y = cy + Math.sin(a0) * rad;
+    const p1x = cx + Math.cos(a1) * rad;
+    const p1y = cy + Math.sin(a1) * rad;
+    out.push({
+      c1x: p0x + -Math.sin(a0) * rad * k,
+      c1y: p0y + Math.cos(a0) * rad * k,
+      c2x: p1x - -Math.sin(a1) * rad * k,
+      c2y: p1y - Math.cos(a1) * rad * k,
+      x: p1x,
+      y: p1y,
+    });
+  }
+  return out;
+}
+
+/**
+ * Vertical smoothed capsule in a (0,0)–(w,h) box.
+ * Roomzer / Figma construction: shoulders (κ=0 on the side) + trimmed circular
+ * arc + a single cap cubic so the short ends do not cusp.
+ * https://roomzer.dev/corner-smoothing-on-the-web/ (accessed 2026-08-19)
+ */
+function verticalSmoothedCapsule(w, h, smoothing) {
+  const r = w / 2;
+  const s = Math.max(0, Math.min(1, smoothing));
+  const beta = (45 * s * Math.PI) / 180;
+  const arcHalf = (45 * (1 - s) * Math.PI) / 180;
+  const arcLen = Math.sin(arcHalf) * r * Math.SQRT2;
+  const c = r * Math.tan(beta / 2) * Math.cos(beta);
+  const d = c * Math.tan(beta);
+  const longBudget = h / 2;
+  const longSpace = Math.max(0, Math.min((1 + s) * r, longBudget) - d - arcLen - c);
+  const bl = longSpace / 3;
+  const al = 2 * bl;
+  const pLong = al + bl + c + d + arcLen;
+  const t = s > 0 ? (4 * r * Math.tan(beta / 2)) / 3 : 0;
+  const capSpan = w - 2 * d - 2 * arcLen;
+  const tx = t * Math.sin(beta);
+  const ty = t * Math.cos(beta);
+  const cmds = [];
+  let x = w;
+  let y = h - pLong;
+  cmds.push({ op: "M", x, y });
+  const cubic = (c1x, c1y, c2x, c2y, ex, ey) => {
+    cmds.push({ op: "C", c1x: x + c1x, c1y: y + c1y, c2x: x + c2x, c2y: y + c2y, x: x + ex, y: y + ey });
+    x += ex;
+    y += ey;
+  };
+  const arc = (dx, dy) => {
+    for (const seg of arcToCubics(x, y, dx, dy, r, 1)) {
+      cmds.push({ op: "C", ...seg });
+    }
+    x += dx;
+    y += dy;
+  };
+  cubic(0, al, 0, al + bl, -d, al + bl + c);
+  if (arcLen > 0.001) arc(-arcLen, arcLen);
+  cubic(-ty, tx, -capSpan + ty, tx, -capSpan, 0);
+  if (arcLen > 0.001) arc(-arcLen, -arcLen);
+  cubic(-d, -c, -d, -(bl + c), -d, -(al + bl + c));
+  if (h - 2 * pLong > 0.01) {
+    cmds.push({ op: "L", x: 0, y: pLong });
+    x = 0;
+    y = pLong;
+  }
+  cubic(0, -al, 0, -(al + bl), d, -(al + bl + c));
+  if (arcLen > 0.001) arc(arcLen, -arcLen);
+  cubic(ty, -tx, capSpan - ty, -tx, capSpan, 0);
+  if (arcLen > 0.001) arc(arcLen, arcLen);
+  cubic(d, c, d, bl + c, d, al + bl + c);
+  return cmds;
+}
+
+/** Vertical stadium with Figma/iOS cap↔side easing. Pose-warped via mapFn. */
 function stadiumPath(mapFn, cx, cy, rx, ry, turn, tilt) {
-  const r = rx;
-  const a = ry - r;
-  const y1 = cy - a;
-  const y2 = cy + a;
-  const k = KAPPA;
-  const start = mapped(mapFn, cx - r, y1, turn, tilt);
-  return (
-    `M${fmt(start)}` +
-    cubicTo(mapFn, cx - r, y1 - r * k, cx - r * k, y1 - r, cx, y1 - r, turn, tilt) +
-    cubicTo(mapFn, cx + r * k, y1 - r, cx + r, y1 - r * k, cx + r, y1, turn, tilt) +
-    lineTo(mapFn, cx + r, y2, turn, tilt) +
-    cubicTo(mapFn, cx + r, y2 + r * k, cx + r * k, y2 + r, cx, y2 + r, turn, tilt) +
-    cubicTo(mapFn, cx - r * k, y2 + r, cx - r, y2 + r * k, cx - r, y2, turn, tilt) +
-    lineTo(mapFn, cx - r, y1, turn, tilt) +
-    "Z"
-  );
+  const ox = cx - rx;
+  const oy = cy - ry;
+  const cmds = verticalSmoothedCapsule(rx * 2, ry * 2, STADIUM_SMOOTH);
+  let d = "";
+  for (const cmd of cmds) {
+    if (cmd.op === "M") d += `M${fmt(mapped(mapFn, ox + cmd.x, oy + cmd.y, turn, tilt))}`;
+    else if (cmd.op === "L") d += lineTo(mapFn, ox + cmd.x, oy + cmd.y, turn, tilt);
+    else d += cubicTo(mapFn, ox + cmd.c1x, oy + cmd.c1y, ox + cmd.c2x, oy + cmd.c2y, ox + cmd.x, oy + cmd.y, turn, tilt);
+  }
+  return `${d}Z`;
 }
 
 /** Ellipse (blink slit / non-stadium hole): 4 cubics, not a sampled ring. */

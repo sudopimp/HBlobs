@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 /**
- * G-eye-smooth: idle stadium eyes are analytic caps (≤8 cubics + straight sides),
- * not a 48-point sampled ring. Eye holes carry a same-color non-scaling stroke
- * so the dark-on-bright rim keeps coverage under zoom.
+ * G-eye-smooth: idle stadium eyes ease the cap↔side join (Figma/iOS ξ),
+ * not a hard C+L stadium and not a 48-point sampled ring. Eye holes carry
+ * a same-color non-scaling stroke so the dark-on-bright rim keeps coverage.
  *
  * pass:    src/engine/face.js eyePath + define-blob / engine-frame markup
  * twin:    gates/fixtures/eye-sampled-ring.mjs
- * fail-pass: sampled-ring | missing-sides | hole-stroke
+ * fail-pass: hard-join | sampled-ring | hole-stroke
  * fail-twin: sampled-ring
  */
 import { resolve } from "node:path";
@@ -26,12 +26,11 @@ function counts(d) {
 
 function assertSmooth(d, label) {
   const n = counts(d);
-  const sides = n.L + n.V;
-  if (n.C > 8 || (n.A === 0 && n.C < 2)) {
-    fail("sampled-ring", `${label} C=${n.C} A=${n.A} (want ≤8 cubics or arcs)`);
+  if (n.C === 4 && n.L >= 2) {
+    fail("hard-join", `${label} C=${n.C} L=${n.L} (cap↔side is still a hard C+L join)`);
   }
-  if (n.A < 2 && sides < 2) {
-    fail("missing-sides", `${label} L+V=${sides} A=${n.A} (stadium needs straight sides or arcs)`);
+  if (n.C > 24 || (n.A === 0 && n.C < 6)) {
+    fail("sampled-ring", `${label} C=${n.C} A=${n.A} (want smoothed capsule, not a 48-pt ring)`);
   }
   return n;
 }
