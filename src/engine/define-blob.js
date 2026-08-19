@@ -14,6 +14,7 @@ import {
   idleGazeTarget,
 } from "./face.js";
 import { blinkLid, blinkOpenY } from "./blink.js";
+import { CHROME_LAYERS, chromeDefs, chromeLiveMarkup } from "./chrome.js";
 import { drawFx } from "./overlays.js";
 
 const RING_N = 128;
@@ -30,28 +31,15 @@ function svgMarkup(clipId, holes = []) {
   const holePaths = holes
     .map((h) => `<path data-hole="${h.id}" fill="var(--bg)"/>`)
     .join("");
-  const coreId = `${clipId}-core`;
-  const softId = `${clipId}-soft`;
-  return `<svg viewBox="-15 -15 259 259" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  return `<svg viewBox="-15 -15 259 259" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" shape-rendering="geometricPrecision">
   <defs>
     <clipPath id="${clipId}"><path data-clip></path></clipPath>
-    <radialGradient id="${coreId}" cx="38%" cy="32%" r="72%">
-      <stop offset="0%" stop-color="#fff" stop-opacity=".32"/>
-      <stop offset="55%" stop-color="#fff" stop-opacity="0"/>
-    </radialGradient>
-    <filter id="${softId}" x="-40%" y="-40%" width="180%" height="180%">
-      <feGaussianBlur stdDeviation="1.4"/>
-    </filter>
+    ${chromeDefs(clipId)}
   </defs>
   <g data-face>
     <path data-layer="body" fill="var(--fg)"/>
     <g clip-path="url(#${clipId})">
-      <ellipse data-layer="core" cx="${CX}" cy="${CX}" rx="58" ry="64" fill="url(#${coreId})" opacity="0"/>
-      <ellipse data-inner-ear="l" cx="${CX - 46}" cy="${CX - 52}" rx="9" ry="8" fill="var(--bg)" opacity="0"/>
-      <ellipse data-inner-ear="r" cx="${CX + 46}" cy="${CX - 52}" rx="9" ry="8" fill="var(--bg)" opacity="0"/>
-      <ellipse data-layer="gloss-main" cx="${CX - 18}" cy="${CX - 28}" rx="22" ry="12" fill="#fff" opacity="0" filter="url(#${softId})"/>
-      <ellipse data-layer="gloss-ear-l" cx="${CX - 50}" cy="${CX - 62}" rx="9" ry="6" fill="#fff" opacity="0" filter="url(#${softId})"/>
-      <ellipse data-layer="gloss-ear-r" cx="${CX + 50}" cy="${CX - 62}" rx="9" ry="6" fill="#fff" opacity="0" filter="url(#${softId})"/>
+      ${chromeLiveMarkup(clipId, CX)}
       <path data-layer="eye-l" fill="var(--bg)"/>
       <path data-layer="eye-r" fill="var(--bg)"/>
       ${holePaths}
@@ -82,6 +70,7 @@ svg {
   width: 100%;
   height: auto;
   overflow: visible;
+  shape-rendering: geometricPrecision;
 }
 `;
 }
@@ -293,7 +282,7 @@ export function defineBlob(recipe) {
     constructor() {
       super();
       this._state = STATES.includes("idle") ? "idle" : STATES[0];
-      this._skin = "flat";
+      this._skin = finishFlat ? "flat" : "gummy";
       this._raf = 0;
       this._t0 = 0;
       this._last = 0;
@@ -318,12 +307,7 @@ export function defineBlob(recipe) {
         face: root.querySelector("[data-face]"),
         body: root.querySelector("[data-layer=body]"),
         clip: root.querySelector("[data-clip]"),
-        core: root.querySelector("[data-layer=core]"),
-        innerEarL: root.querySelector("[data-inner-ear=l]"),
-        innerEarR: root.querySelector("[data-inner-ear=r]"),
-        glossMain: root.querySelector("[data-layer=gloss-main]"),
-        glossEarL: root.querySelector("[data-layer=gloss-ear-l]"),
-        glossEarR: root.querySelector("[data-layer=gloss-ear-r]"),
+        chrome: [...root.querySelectorAll("[data-chrome]")],
         eyeL: root.querySelector("[data-layer=eye-l]"),
         eyeR: root.querySelector("[data-layer=eye-r]"),
         mouth: root.querySelector("[data-layer=mouth]"),
@@ -377,7 +361,8 @@ export function defineBlob(recipe) {
       this.setAttribute("data-state", this._state);
       const size = this.getAttribute("size");
       if (size) this.style.width = `${Number(size)}px`;
-      this._skin = this.getAttribute("skin") === "gummy" ? "gummy" : "flat";
+      const skinAttr = this.getAttribute("skin");
+      this._skin = skinAttr === "flat" ? "flat" : skinAttr === "gummy" ? "gummy" : finishFlat ? "flat" : "gummy";
       this.setAttribute("data-skin", this._skin);
       const pose = poseDefaults(targetsFor(this._state));
       if (!this._snapped) {
@@ -572,27 +557,19 @@ export function defineBlob(recipe) {
 
       const gummy = !finishFlat && this._skin === "gummy";
       const showMouth = gummy && !mouthless.has(this._state);
-      this._els.core.setAttribute("opacity", gummy ? "1" : "0");
-      this._els.innerEarL.setAttribute("opacity", gummy ? "0.16" : "0");
-      this._els.innerEarR.setAttribute("opacity", gummy ? "0.16" : "0");
-      this._els.glossMain.setAttribute("opacity", gummy ? "0.55" : "0");
-      this._els.glossEarL.setAttribute("opacity", gummy ? "0.5" : "0");
-      this._els.glossEarR.setAttribute("opacity", gummy ? "0.5" : "0");
       this._els.mouth.setAttribute("opacity", showMouth ? "1" : "0");
+      for (const el of this._els.chrome) {
+        const spec = CHROME_LAYERS.find((layer) => layer.id === el.getAttribute("data-chrome"));
+        if (!spec) continue;
+        el.setAttribute("opacity", gummy ? String(spec.op) : "0");
+        if (!gummy) continue;
+        const [cx, cy] = mapPoint(spec.x, spec.y, s.turn.x, s.tilt.x);
+        el.setAttribute("cx", cx.toFixed(2));
+        el.setAttribute("cy", cy.toFixed(2));
+        el.setAttribute("rx", String(spec.rx));
+        el.setAttribute("ry", String(spec.ry));
+      }
       if (gummy) {
-        const place = (el, x, y, rx, ry) => {
-          const [cx, cy] = mapPoint(x, y, s.turn.x, s.tilt.x);
-          el.setAttribute("cx", cx.toFixed(2));
-          el.setAttribute("cy", cy.toFixed(2));
-          if (rx) el.setAttribute("rx", String(rx));
-          if (ry) el.setAttribute("ry", String(ry));
-        };
-        place(this._els.core, 0, 10, 56, 62);
-        place(this._els.innerEarL, -46, -52, 9, 8);
-        place(this._els.innerEarR, 46, -52, 9, 8);
-        place(this._els.glossMain, -14, -16, 24, 13);
-        place(this._els.glossEarL, -50, -60, 7, 6);
-        place(this._els.glossEarR, 50, -60, 7, 6);
         this._els.mouth.setAttribute("d", mouthPath(s.turn.x, s.tilt.x));
       }
 

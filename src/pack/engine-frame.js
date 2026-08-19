@@ -13,6 +13,7 @@ import {
   pathFromRing,
 } from "../engine/face.js";
 import { blinkOpenY } from "../engine/blink.js";
+import { chromeDefs, chromeRasterEllipses } from "../engine/chrome.js";
 import { CODEX_ROWS, FRAME_COUNTS, HOLE } from "./const.js";
 import { posesFor } from "./geometry.js";
 
@@ -75,30 +76,25 @@ export function renderEngineSvg(recipe, { state = "idle", motion = {} } = {}) {
   const eyeL = eyePathAt(mapFn, -1, openY, size, pose.gazeX ?? 0, pose.gazeY ?? 0, pose.turn ?? 0, pose.tilt ?? 0, 1, face);
   const eyeR = eyePathAt(mapFn, 1, openY, size, pose.gazeX ?? 0, pose.gazeY ?? 0, pose.turn ?? 0, pose.tilt ?? 0, 1, face);
   const clipId = "hblob-clip";
-  const coreId = "hblob-core";
-  const gloss = (cx, cy, rx, ry, op) => {
-    const [px, py] = mapPoint(cx, cy, pose.turn ?? 0, pose.tilt ?? 0);
-    return `<ellipse cx="${px.toFixed(2)}" cy="${py.toFixed(2)}" rx="${rx}" ry="${ry}" fill="#fff" opacity="${chrome ? op : 0}"/>`;
-  };
-  const [corex, corey] = mapPoint(0, 10, pose.turn ?? 0, pose.tilt ?? 0);
   const mouth = chrome ? mouthPath(pose.turn ?? 0, pose.tilt ?? 0) : "";
+  const turn = pose.turn ?? 0;
+  const tilt = pose.tilt ?? 0;
+  const layers = chromeRasterEllipses((x, y) => mapPoint(x, y, turn, tilt), {
+    on: chrome,
+    well: hole,
+    prefix: "hblob",
+  });
 
   return `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -15 259 259" width="384" height="384">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-15 -15 259 259" width="384" height="384" shape-rendering="geometricPrecision">
   <defs>
     <clipPath id="${clipId}"><path d="${bodyD}"/></clipPath>
-    <radialGradient id="${coreId}" cx="38%" cy="32%" r="72%">
-      <stop offset="0%" stop-color="#fff" stop-opacity=".32"/>
-      <stop offset="55%" stop-color="#fff" stop-opacity="0"/>
-    </radialGradient>
+    ${chromeDefs("hblob")}
   </defs>
   <g transform="${faceTransform(pose, motion)}">
     <path d="${bodyD}" fill="${fill}"/>
     <g clip-path="url(#${clipId})">
-      <ellipse cx="${corex.toFixed(2)}" cy="${corey.toFixed(2)}" rx="56" ry="62" fill="url(#${coreId})" opacity="${chrome ? 1 : 0}"/>
-      ${gloss(-14, -16, 24, 13, 0.55)}
-      ${gloss(-50, -60, 7, 6, 0.5)}
-      ${gloss(50, -60, 7, 6, 0.5)}
+      ${layers}
       <path d="${eyeL}" fill="${hole}"/>
       <path d="${eyeR}" fill="${hole}"/>
       ${mouth ? `<path d="${mouth}" fill="${hole}" opacity="1"/>` : ""}
