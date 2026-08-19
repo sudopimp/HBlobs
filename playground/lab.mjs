@@ -5,6 +5,17 @@
 import { smin, traceSdf } from "../src/engine/sdf.js";
 
 const RING_N = 128;
+const MAGENTA = "#e84a9a";
+const TEAL = "#2ec4b6";
+
+const FACE_GUMMY = { size: 1.0, gap: 2.20, height: 0.55, eyeWidth: 0.82, eyeHeight: 1.32 };
+const FACE_DROPLET = { size: 0.95, gap: 2.0, height: 0.4, eyeWidth: 0.82, eyeHeight: 1.32 };
+
+const CORE_STATES = {
+  idle: {},
+  run: {},
+  failed: {},
+};
 
 const DROPLET = {
   schemaVersion: 0,
@@ -12,6 +23,9 @@ const DROPLET = {
   template: "droplet",
   skin: "flat",
   state: "idle",
+  fill: TEAL,
+  face: { ...FACE_DROPLET },
+  states: { ...CORE_STATES },
   body: [
     { type: "circle", id: "head", x: 0, y: -20, r: 48 },
     { type: "circle", id: "belly", x: 0, y: 28, r: 70 },
@@ -25,6 +39,9 @@ const GUMMY = {
   template: "gummy",
   skin: "flat",
   state: "idle",
+  fill: MAGENTA,
+  face: { ...FACE_GUMMY },
+  states: { ...CORE_STATES },
   body: [
     { type: "circle", id: "head", x: 0, y: 4, r: 64 },
     { type: "circle", id: "belly", x: 0, y: 22, r: 62 },
@@ -38,14 +55,31 @@ const GUMMY = {
 
 let current = structuredClone(GUMMY);
 let lastYMid = 0;
+let massSeq = 0;
+
+function hydrate(recipe) {
+  if (!recipe.states || typeof recipe.states !== "object" || Array.isArray(recipe.states)) {
+    recipe.states = {};
+  }
+  for (const key of ["idle", "run", "failed"]) {
+    if (!recipe.states[key] || typeof recipe.states[key] !== "object") recipe.states[key] = {};
+  }
+  if (!recipe.face || typeof recipe.face !== "object") {
+    recipe.face = { ...(recipe.template === "droplet" ? FACE_DROPLET : FACE_GUMMY) };
+  }
+  if (!recipe.fill) recipe.fill = recipe.template === "droplet" ? TEAL : MAGENTA;
+  if (!recipe.state) recipe.state = "idle";
+  return recipe;
+}
 
 export function applyTemplate(name) {
-  current = structuredClone(name === "gummy" ? GUMMY : DROPLET);
+  current = hydrate(structuredClone(name === "gummy" ? GUMMY : DROPLET));
+  massSeq = 0;
   return current;
 }
 
 export function serializeRecipe() {
-  return current;
+  return hydrate(current);
 }
 
 export function setSlider(name, value) {
@@ -96,6 +130,33 @@ function nodeSdf(byId, id, cache) {
   return fn;
 }
 
+function massRadius(x, y) {
+  let r = 36;
+  for (const n of current.body) {
+    if (n.type !== "circle") continue;
+    const d = Math.hypot(x - n.x, y - n.y);
+    const bulge = n.r - d + 24;
+    if (bulge > r) r = bulge;
+  }
+  return r;
+}
+
+export function addMass(x, y) {
+  if (!current?.body) return current;
+  const px = Number(x);
+  const py = Number(y);
+  const cx = Number.isFinite(px) ? px : 0;
+  const cy = Number.isFinite(py) ? py : 0;
+  const r = massRadius(cx, cy);
+  massSeq += 1;
+  const id = `click-${massSeq}`;
+  const joinId = `join-${massSeq}`;
+  const root = rootNode(current.body);
+  current.body.push({ type: "circle", id, x: cx, y: cy, r });
+  current.body.push({ type: "smin", id: joinId, a: root.id, b: id, k: 18 });
+  return current;
+}
+
 export function compileSilhouette(recipe) {
   const body = recipe?.body;
   if (!Array.isArray(body) || body.length === 0) {
@@ -138,7 +199,7 @@ export function loadQuery(search) {
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed) || !Array.isArray(parsed.body)) {
       return false;
     }
-    current = parsed;
+    current = hydrate(parsed);
     return true;
   } catch {
     return false;
@@ -147,4 +208,19 @@ export function loadQuery(search) {
 
 export function shareSearch(recipe = current) {
   return `?recipe=${encodeURIComponent(JSON.stringify(recipe))}`;
+}
+
+export async function exportPack(outDir) {
+  const href = new URL("../src/pack/write.js", import.meta.url);
+  let mod;
+  try {
+    mod = await import(href.href);
+  } catch {
+    throw new Error("exportPack: src/pack/write.js is missing — pack writer is not available yet");
+  }
+  const write = mod.writePack ?? mod.exportPack ?? mod.default;
+  if (typeof write !== "function") {
+    throw new Error("exportPack: src/pack/write.js exports no write function");
+  }
+  return write(outDir, serializeRecipe());
 }

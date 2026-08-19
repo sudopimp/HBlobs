@@ -6,14 +6,15 @@
     <title>HBlobs maker</title>
     <style>
       :root {
-        --bg: #111110;
+        --bg: #161614;
         --fg: #e84a9a;
+        --teal: #2ec4b6;
         --ink: #f2f2f2;
         --muted: #ffffff8c;
         --line: #ffffff1f;
         --chip: #ffffff0f;
         --chip-on: #ffffff22;
-        --blob-eye: #111110;
+        --blob-eye: #161614;
       }
       * { box-sizing: border-box; }
       html, body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.45 ui-sans-serif, system-ui, sans-serif; }
@@ -27,6 +28,7 @@
         align-items: start;
       }
       .stage {
+        position: relative;
         display: grid;
         place-items: center;
         min-height: 320px;
@@ -34,7 +36,9 @@
         border-radius: 18px;
         background: #ffffff08;
       }
-      .stage svg { width: 280px; height: 280px; overflow: visible; }
+      #live-host { width: 280px; height: 280px; display: grid; place-items: center; }
+      #live-host > * { width: 260px; }
+      .stage svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
       .ghost { fill: #ffffff14; stroke: #ffffff55; stroke-width: 1.6; cursor: grab; }
       .ghost:active { cursor: grabbing; }
       h2 { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 18px 0 10px; }
@@ -56,7 +60,7 @@
         appearance: none;
         border: 0;
         background: var(--fg);
-        color: #111110;
+        color: #161614;
         border-radius: 999px;
         padding: 10px 18px;
         font: inherit;
@@ -64,6 +68,7 @@
         cursor: pointer;
         margin-top: 18px;
       }
+      p.hint { color: var(--muted); font-size: 12px; margin: 8px 0 0; max-width: 36rem; }
       label.slide {
         display: grid;
         grid-template-columns: 9.5rem 1fr 2.4rem;
@@ -97,51 +102,46 @@
   <body>
     <h1>Maker</h1>
     <p class="lead">
-      Arrastrá las masas, regulá las orejas y la gordura, y descargá un PNG.
-      El blob ya está en <b>idle</b>. JSON queda plegado para quien lo necesite.
+      Live <code>defineBlob</code> / <code>BlobElement</code> springs. Drag the masses, tune the ears
+      and belly, click the stage to add mass, then export a Hermes pack
+      (<code>pet.json</code> + <code>spritesheet.webp</code> via <code>exportPack</code>).
     </p>
     <div class="hero">
-      <div class="stage">
+      <div class="stage" id="stage-wrap">
+        <div id="live-host"></div>
         <svg id="stage" viewBox="-150 -150 300 300" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <g id="blob" data-state="idle">
-            <path id="body" fill="var(--fg)" />
-            <ellipse id="gloss" cx="-14" cy="-16" rx="24" ry="13" fill="#fff" opacity="0" />
-            <ellipse id="eye-l" cx="-22" cy="-4" rx="14" ry="18" fill="var(--bg)" />
-            <ellipse id="eye-r" cx="22" cy="-4" rx="14" ry="18" fill="var(--bg)" />
-          </g>
           <g id="ghosts"></g>
         </svg>
       </div>
       <div class="panel">
-        <h2>Plantilla</h2>
+        <h2>Template</h2>
         <div class="chips" id="templates">
           <button class="chip" data-template="gummy" aria-pressed="true">gummy</button>
-          <button class="chip" data-template="droplet">gota</button>
+          <button class="chip" data-template="droplet">droplet</button>
         </div>
-        <h2>Forma</h2>
-        <label class="slide">Oreja izquierda <input id="earL" type="range" min="0" max="100" value="50" /> <span id="earL-v">50</span></label>
-        <label class="slide">Oreja derecha <input id="earR" type="range" min="0" max="100" value="50" /> <span id="earR-v">50</span></label>
-        <label class="slide">Gordura <input id="belly" type="range" min="8" max="100" value="62" /> <span id="belly-v">62</span></label>
+        <h2>Shape</h2>
+        <label class="slide">Left ear <input id="earL" type="range" min="0" max="100" value="50" /> <span id="earL-v">50</span></label>
+        <label class="slide">Right ear <input id="earR" type="range" min="0" max="100" value="50" /> <span id="earR-v">50</span></label>
+        <label class="slide">Belly <input id="belly" type="range" min="8" max="100" value="62" /> <span id="belly-v">62</span></label>
         <h2>Skin</h2>
         <div class="chips" id="skins">
           <button class="chip" data-skin="flat" aria-pressed="true">flat</button>
           <button class="chip" data-skin="gummy">gummy</button>
         </div>
-        <h2>Estado</h2>
+        <h2>State</h2>
         <div class="chips" id="states">
           <button class="chip" data-state="idle" aria-pressed="true">idle</button>
-          <button class="chip" data-state="searching">searching</button>
-          <button class="chip" data-state="working">working</button>
-          <button class="chip" data-state="notifying">notifying</button>
-          <button class="chip" data-state="alerting">alerting</button>
+          <button class="chip" data-state="run">run</button>
+          <button class="chip" data-state="failed">failed</button>
         </div>
-        <h2>Acciones</h2>
+        <h2>Actions</h2>
         <div class="chips">
-          <button class="chip" id="undo" type="button">Deshacer</button>
+          <button class="chip" id="undo" type="button">Undo</button>
           <button class="chip" id="reset" type="button">Reset</button>
-          <button class="chip" id="random" type="button">Al azar</button>
+          <button class="chip" id="random" type="button">Random</button>
         </div>
-        <button class="cta" id="png" type="button">Descargar PNG</button>
+        <button class="cta" id="export" type="button">Export pack</button>
+        <p class="hint">Calls <code>exportPack</code> to write <code>pet.json</code> and <code>spritesheet.webp</code>.</p>
         <details>
           <summary>Snippet</summary>
           <pre id="snip"></pre>
@@ -161,15 +161,14 @@
         ringYMid,
         loadQuery,
         shareSearch,
+        addMass,
+        exportPack,
       } from "./lab.mjs";
-      import { pathFromRing } from "../src/engine/face.js";
+      import { defineBlob } from "../src/engine/define-blob.js";
 
-      const STATES = ["idle", "searching", "working", "notifying", "alerting"];
       const stage = document.getElementById("stage");
-      const body = document.getElementById("body");
+      const liveHost = document.getElementById("live-host");
       const ghosts = document.getElementById("ghosts");
-      const gloss = document.getElementById("gloss");
-      const blob = document.getElementById("blob");
       const snip = document.getElementById("snip");
       const jsonPre = document.getElementById("json");
       const sliders = {
@@ -180,7 +179,10 @@
 
       let history = [];
       let drag = null;
+      let moved = false;
       let sharing = false;
+      let blobUid = 0;
+      let liveEl = null;
 
       if (!loadQuery(location.search)) applyTemplate("gummy");
 
@@ -220,20 +222,12 @@
         return pt.matrixTransform(stage.getScreenCTM().inverse());
       }
 
-      function paint() {
+      function syncGhosts() {
         const r = recipe();
         const ring = compileSilhouette(r);
-        if (ring.length) body.setAttribute("d", pathFromRing(ring));
         const mid = ringYMid();
-        const skin = r.skin === "gummy" ? "gummy" : "flat";
-        const state = STATES.includes(r.state) ? r.state : "idle";
-        r.skin = skin;
-        r.state = state;
-        gloss.setAttribute("opacity", skin === "gummy" ? "0.55" : "0");
-        blob.dataset.state = state;
-        const lean = state === "idle" ? -8 : state === "alerting" ? 6 : state === "searching" ? 10 : 0;
-        blob.setAttribute("transform", `rotate(${lean})`);
         ghosts.replaceChildren();
+        if (!ring.length) return;
         for (const n of r.body) {
           if (n.type !== "circle") continue;
           const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
@@ -244,12 +238,22 @@
           c.setAttribute("r", String(Math.max(n.r, 6)));
           c.addEventListener("pointerdown", (ev) => {
             ev.preventDefault();
+            ev.stopPropagation();
             pushHist();
             drag = { id: n.id };
+            moved = false;
             c.setPointerCapture(ev.pointerId);
           });
           ghosts.append(c);
         }
+      }
+
+      function syncChrome() {
+        const r = recipe();
+        const skin = r.skin === "gummy" ? "gummy" : "flat";
+        const state = r.states?.[r.state] ? r.state : "idle";
+        r.skin = skin;
+        r.state = state;
         const tpl = templateOf(r);
         document.querySelectorAll("#templates [data-template]").forEach((b) => {
           b.setAttribute("aria-pressed", String(b.dataset.template === tpl));
@@ -261,9 +265,8 @@
           b.setAttribute("aria-pressed", String(b.dataset.state === state));
         });
         snip.textContent =
-          tpl === "gummy"
-            ? `<gummy-blob state="${state}" skin="${skin}" size="128"></gummy-blob>\n\nimport "../src/gummy-blob.js";`
-            : `<!-- silueta compilada · ${shareSearch(r)} -->`;
+          `defineBlob({\n  tag: "${r.tag ?? "maker-blob"}",\n  fill: "${r.fill}",\n  body, face, states\n});\n\n` +
+          `<${r.tag ?? "maker-blob"} state="${state}" skin="${skin}" size="128"></${r.tag ?? "maker-blob"}>`;
         jsonPre.textContent = JSON.stringify(r, null, 2);
         syncSliders();
         if (!sharing) {
@@ -273,27 +276,62 @@
         }
       }
 
+      function remount() {
+        const r = recipe();
+        const tag = `maker-blob-${++blobUid}`;
+        defineBlob({
+          tag,
+          body: r.body,
+          face: r.face,
+          states: r.states,
+          fill: r.fill,
+        });
+        const el = document.createElement(tag);
+        el.setAttribute("size", "260");
+        el.setAttribute("state", r.states?.[r.state] ? r.state : "idle");
+        el.setAttribute("skin", r.skin === "gummy" ? "gummy" : "flat");
+        liveHost.replaceChildren(el);
+        liveEl = el;
+        syncGhosts();
+        syncChrome();
+      }
+
       stage.addEventListener("pointermove", (ev) => {
         if (!drag) return;
+        moved = true;
         const p = svgPoint(ev);
         const node = recipe().body.find((n) => n.id === drag.id);
         if (!node) return;
         node.x = p.x;
         node.y = p.y + ringYMid();
-        paint();
+        const ghost = ghosts.querySelector(`[data-id="${drag.id}"]`);
+        if (ghost) {
+          ghost.setAttribute("cx", String(node.x));
+          ghost.setAttribute("cy", String(p.y));
+        }
       });
       stage.addEventListener("pointerup", () => {
+        if (drag && moved) remount();
         drag = null;
       });
       stage.addEventListener("pointercancel", () => {
         drag = null;
+      });
+      stage.addEventListener("click", (ev) => {
+        if (drag || moved || ev.target.closest(".ghost")) {
+          moved = false;
+          return;
+        }
+        const p = svgPoint(ev);
+        addMass(p.x, p.y + ringYMid());
+        remount();
       });
 
       for (const [name, el] of Object.entries(sliders)) {
         el.addEventListener("pointerdown", () => pushHist());
         el.addEventListener("input", () => {
           setSlider(name, el.value);
-          paint();
+          remount();
         });
       }
 
@@ -302,21 +340,23 @@
         if (!b) return;
         pushHist();
         applyTemplate(b.dataset.template);
-        paint();
+        remount();
       });
       document.getElementById("skins").addEventListener("click", (ev) => {
         const b = ev.target.closest("[data-skin]");
         if (!b) return;
         pushHist();
         recipe().skin = b.dataset.skin;
-        paint();
+        if (liveEl) liveEl.setAttribute("skin", b.dataset.skin === "gummy" ? "gummy" : "flat");
+        syncChrome();
       });
       document.getElementById("states").addEventListener("click", (ev) => {
         const b = ev.target.closest("[data-state]");
         if (!b) return;
         pushHist();
         recipe().state = b.dataset.state;
-        paint();
+        if (liveEl) liveEl.setAttribute("state", b.dataset.state);
+        syncChrome();
       });
       document.getElementById("undo").addEventListener("click", () => {
         const prev = history.pop();
@@ -327,43 +367,31 @@
         cur.template = prev.template;
         cur.skin = prev.skin;
         cur.state = prev.state;
+        cur.fill = prev.fill;
+        cur.face = prev.face;
+        cur.states = prev.states;
         cur.body = prev.body;
-        paint();
+        remount();
       });
       document.getElementById("reset").addEventListener("click", () => {
         pushHist();
         applyTemplate(templateOf(recipe()));
-        paint();
+        remount();
       });
       document.getElementById("random").addEventListener("click", () => {
         pushHist();
         setSlider("belly", 40 + Math.round(Math.random() * 50));
         setSlider("earL", 25 + Math.round(Math.random() * 55));
         setSlider("earR", 25 + Math.round(Math.random() * 55));
-        paint();
+        remount();
       });
-      document.getElementById("png").addEventListener("click", () => {
-        const clone = stage.cloneNode(true);
-        clone.querySelector("#ghosts")?.remove();
-        const xml = new XMLSerializer().serializeToString(clone);
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement("canvas");
-          canvas.width = 512;
-          canvas.height = 512;
-          const ctx = canvas.getContext("2d");
-          ctx.fillStyle = "#111110";
-          ctx.fillRect(0, 0, 512, 512);
-          ctx.drawImage(img, 0, 0, 512, 512);
-          const a = document.createElement("a");
-          a.download = "blob.png";
-          a.href = canvas.toDataURL("image/png");
-          a.click();
-        };
-        img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(xml);
+      document.querySelector(".cta").addEventListener("click", () => {
+        exportPack("dist/pack").catch((err) => {
+          jsonPre.textContent = String(err?.message ?? err);
+        });
       });
 
-      paint();
+      remount();
     </script>
   </body>
 </html>
