@@ -2,7 +2,7 @@
 
 A living 2D blob. The website is the engine.
 
-**[Open the live studio →](https://sudopimp.github.io/HBlobs/)** — `defineBlob` in the tab. Stadium-hole eyes, held lean, gummy gloss, springs. Pointer follow. ▸ Demo drives the real chips.
+**[Open the live studio →](https://sudopimp.github.io/HBlobs/)** — one blob, full tab, `defineBlob` running. Pointer follow. Click to pose.
 
 [![MIT](https://img.shields.io/badge/license-MIT-22c55e.svg)](LICENSE)
 [![Hermes](https://img.shields.io/badge/Hermes-%2Fblob-ff5ec8.svg)](https://hermes-agent.nousresearch.com/docs/user-guide/features/skills)
