@@ -7,6 +7,27 @@ export function smin(a, b, k) {
   return a * h + b * (1 - h) - k * h * (1 - h);
 }
 
+export function smax(a, b, k) {
+  if (!k) return Math.max(a, b);
+  return -smin(-a, -b, k);
+}
+
+export function sdfCapsule(px, py, ax, ay, bx, by, r) {
+  const pax = px - ax;
+  const pay = py - ay;
+  const bax = bx - ax;
+  const bay = by - ay;
+  const baba = bax * bax + bay * bay;
+  const h = baba > 0 ? clamp((pax * bax + pay * bay) / baba, 0, 1) : 0;
+  return Math.hypot(pax - bax * h, pay - bay * h) - r;
+}
+
+export function sdfRbox(px, py, x, y, w, h, r) {
+  const qx = Math.abs(px - x) - w * 0.5 + r;
+  const qy = Math.abs(py - y) - h * 0.5 + r;
+  return Math.min(Math.max(qx, qy), 0) + Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) - r;
+}
+
 export function sdfGrad(sdf, x, y) {
   const e = 0.35;
   const gx = sdf(x + e, y) - sdf(x - e, y);
