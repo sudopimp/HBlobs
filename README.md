@@ -45,17 +45,11 @@ python3 -m http.server 8765 --directory .
 # http://127.0.0.1:8765/playground/lab.html
 ```
 
-## Atlas loops (Hermes pack, not the product)
+## Demo
 
-The GIFs are Codex-sheet frames for the pet pack. The character on the website is the live custom element.
+The character is the live custom element, not a GIF.
 
-<p align="center">
-  <img src="demos/idle.gif" alt="Pack idle loop" width="160" />
-  <img src="demos/walk.gif" alt="Pack roam loop" width="160" />
-  <img src="demos/run.gif" alt="Pack CLI run loop" width="160" />
-</p>
-
-[wave](demos/wave.gif) · [jump](demos/jump.gif) · [contact sheet](demos/atlas.png) · [static gallery](demos/index.html)
+**[Open the studio →](https://sudopimp.github.io/HBlobs/)** · [embed](https://sudopimp.github.io/HBlobs/site/embed.html) · [maker](https://sudopimp.github.io/HBlobs/playground/lab.html)
 
 ## Why this exists
 
